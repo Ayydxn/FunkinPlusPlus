@@ -1,0 +1,23 @@
+﻿# Default: normalize all text files to LF in the repo
+* text=auto eol=lf
+
+# Force LF for source files regardless of OS
+*.cpp    text eol=lf
+*.hpp    text eol=lf
+*.h      text eol=lf
+*.lua    text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.json   text eol=lf
+*.glsl   text eol=lf
+*.hlsl   text eol=lf
+
+# Mark binary files so Git never diffs or merges them
+*.dll    binary
+*.lib    binary
+*.exe    binary
+*.spv    binary    ← SPIR-V compiled shaders
+*.png    binary
+*.jpg    binary
+*.ogg    binary
+*.opus   binary

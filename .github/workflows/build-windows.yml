@@ -1,0 +1,32 @@
+﻿# Automatically build the project and run any configured tests for every push and submitted pull request on Windows.
+# This can help catch issues and provides a first line of defense against bad commits.
+
+name: Build Friday Night Funkin'++ (Windows)
+on: [ pull_request, push ]
+
+permissions:
+  contents: read
+
+env:
+  SOLUTION_FILE_PATH: Funkin++.slnx
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-2025-vs2026 ]
+        build-configs: [ Debug, Development, Release, Distribution ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+        with:
+          msbuild-architecture: x64
+      - name: Setup FNF++ for Building
+        run: cmd /c .\GenerateProjectFiles.bat
+      - name: Build Friday Night Funkin'++
+        working-directory: ${{env.GITHUB_WORKSPACE}}
+        run: msbuild /m /p:Configuration=${{matrix.build-configs}} ${{env.SOLUTION_FILE_PATH}}

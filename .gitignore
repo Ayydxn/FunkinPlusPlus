@@ -1,0 +1,22 @@
+﻿# Build System Output
+Binaries/
+Intermediate/
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+
+# Project Files
+*.vcxproj
+*.vcxproj.*
+*.slnx
+*.slnx.*
+*.sln
+*.sln.*
+Makefile
+
+# IDE Artifacts
+*.user
+*.suo
+.vs/
+.idea/
