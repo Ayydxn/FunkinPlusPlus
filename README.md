@@ -1,6 +1,6 @@
 ﻿# Friday Night Funkin'++
 
-![GitHub Build Status](https://img.shields.io/github/actions/workflow/status/Ayydxn/FunkinPlusPlus+/.github/workflows/build-windows.yml?branch=master)
+![GitHub Build Status](https://img.shields.io/github/actions/workflow/status/Ayydxn/FunkinPlusPlus/.github/workflows/build-windows.yml?branch=master)
 ![GitHub License](https://img.shields.io/github/license/Ayydxn/FunkinPlusPlus)
 ![GitHub Issues](https://img.shields.io/github/issues/Ayydxn/FunkinPlusPlus)
 ![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Ayydxn/FunkinPlusPlus)
