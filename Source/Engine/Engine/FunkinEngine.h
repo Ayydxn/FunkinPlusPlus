@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-#include "Application/ApplicationMessageBroadcaster.h"
+#include "Core/Delegates/MulticastDelegate.h"
+#include "Core/Events/EventBroadcaster.h"
 
 class FUNKIN_API CFunkinEngine
 {
@@ -11,9 +12,16 @@ public:
     CFunkinEngine(const CFunkinEngine&) = delete;
     CFunkinEngine& operator=(const CFunkinEngine&) = delete;
     
-    CApplicationMessageBroadcaster& GetMessageBroadcaster() { return m_MessageBroadcaster; }
+    CEventBroadcaster& GetEventBroadcaster() { return m_MessageBroadcaster; }
 private:
-    CApplicationMessageBroadcaster m_MessageBroadcaster;
+    CEventBroadcaster m_MessageBroadcaster;
 };
 
-extern CFunkinEngine* GFunkinEngine;
+struct FUNKIN_API FEngineDelegates
+{
+    inline static TMulticastDelegate<> PreInitializeDelegate;
+    inline static TMulticastDelegate<> InitializeDelegate;
+    inline static TMulticastDelegate<> ShutdownDelegate;
+};
+
+extern FUNKIN_API CFunkinEngine* GFunkinEngine;

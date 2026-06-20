@@ -1,6 +1,8 @@
 ﻿#include "FunkinPCH.h"
 #include "EngineLoop.h"
 #include "FunkinEngine.h"
+#include "Core/Events/KeyboardEvents.h"
+#include "Core/Events/WindowEvents.h"
 #include "Core/Logging/Logging.h"
 
 CFunkinEngineLoop::CFunkinEngineLoop(IGenericApplication* Application)
@@ -9,6 +11,8 @@ CFunkinEngineLoop::CFunkinEngineLoop(IGenericApplication* Application)
 bool CFunkinEngineLoop::PreInitialize()
 {
     CLogging::Initialize();
+    
+    FEngineDelegates::PreInitializeDelegate.Broadcast();
     
     return true;
 }
@@ -19,13 +23,15 @@ bool CFunkinEngineLoop::Initialize()
     
     GFunkinEngine = new CFunkinEngine();
     
-    m_Application->SetMessageHandler(&GFunkinEngine->GetMessageBroadcaster());
-    
     if (!m_Application->Initialize())
     {
         ENGINE_LOG_CRITICAL_TAG("Core", "Game application failed to initialize!");
         return false;
     }
+    
+    m_ListenerHandle = GFunkinEngine->GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
+    
+    FEngineDelegates::InitializeDelegate.Broadcast();
     
     bIsRunning = true;
     
@@ -55,16 +61,24 @@ void CFunkinEngineLoop::Shutdown() const
 {
     ENGINE_LOG_INFO_TAG("Core", "Shutting down...");
     
+    FEngineDelegates::ShutdownDelegate.Broadcast();
+    
+    GFunkinEngine->GetEventBroadcaster().RemoveListener(m_ListenerHandle);
+    
     m_Application->Shutdown();
     
     CLogging::Shutdown();
-    
+
     delete GFunkinEngine;
 }
 
-EMessageReply CFunkinEngineLoop::OnExitRequested()
+void CFunkinEngineLoop::OnEvent(IEvent& Event)
 {
-    bIsRunning = false;
-    
-    return EMessageReply::Consumed;
+    CEventDispatcher Dispatcher(Event);
+    Dispatcher.Dispatch<CWindowCloseEvent>([this](CWindowCloseEvent&)
+    {
+        bIsRunning = false;
+        
+        return true; 
+    });
 }

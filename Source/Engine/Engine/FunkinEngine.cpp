@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-CFunkinEngine* GFunkinEngine = nullptr;
+FUNKIN_API CFunkinEngine* GFunkinEngine = nullptr;
 
 CFunkinEngine::CFunkinEngine()
 {

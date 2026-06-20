@@ -84,6 +84,11 @@ workspace "Funkin++"
             "/Zc:preprocessor",
             "/Zc:__cplusplus"
         }
+        
+        disablewarnings
+        {
+            "4251"
+        }
 
         defines
         {

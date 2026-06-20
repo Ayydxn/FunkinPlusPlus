@@ -2,8 +2,9 @@
 
 #include "Application/Generic/GenericApplication.h"
 #include "Core/CoreDefines.h"
+#include "Core/Events/EventBroadcaster.h"
 
-class FUNKIN_API CFunkinEngineLoop : public IGenericApplicationMessageHandler
+class FUNKIN_API CFunkinEngineLoop
 {
 public:
     explicit CFunkinEngineLoop(IGenericApplication* Application);
@@ -12,10 +13,11 @@ public:
     bool Initialize();
     void Tick();
     void Shutdown() const;
-    
-    EMessageReply OnExitRequested() override;
+private:
+    void OnEvent(IEvent& Event);
 private:
     IGenericApplication* m_Application = nullptr;
+    CEventBroadcaster::FListenerHandle m_ListenerHandle = 0;
     
     bool bIsRunning = false;
 };
