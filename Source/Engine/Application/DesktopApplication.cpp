@@ -3,8 +3,6 @@
 
 bool CDesktopApplication::Initialize()
 {
-    printf("Hello World!\n");
-    
     return true;
 }
 

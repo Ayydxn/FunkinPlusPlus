@@ -27,6 +27,7 @@
 
 #include "Core/CoreDefines.h"
 #include "Core/CoreTypes.h"
+#include "Core/Misc/AssertionMacros.h"
 
 #ifdef FUNKIN_PLATFORM_WIN64
     #include <Windows.h>

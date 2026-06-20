@@ -4,6 +4,8 @@ project "Engine"
     
     pchsource "%{SourceDir}/Engine/FunkinPCH.cpp"
     pchheader "FunkinPCH.h"
+    
+    IncludeDependencies({ "spdlog" })
 
     files
     {

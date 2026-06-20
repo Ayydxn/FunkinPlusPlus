@@ -1,24 +1,29 @@
 ﻿#include "FunkinPCH.h"
 #include "EngineLoop.h"
 #include "FunkinEngine.h"
+#include "Core/Logging/Logging.h"
 
 CFunkinEngineLoop::CFunkinEngineLoop(IGenericApplication* Application)
     : m_Application(Application) {}
 
 bool CFunkinEngineLoop::PreInitialize()
 {
+    CLogging::Initialize();
+    
     return true;
 }
 
 bool CFunkinEngineLoop::Initialize()
 {
+    ENGINE_LOG_INFO_TAG("Core", "Initializing Funkin Engine...");
+    
     GFunkinEngine = new CFunkinEngine();
     
     m_Application->SetMessageHandler(&GFunkinEngine->GetMessageBroadcaster());
     
     if (!m_Application->Initialize())
     {
-        printf("Application failed to initialize!\n");
+        ENGINE_LOG_CRITICAL_TAG("Core", "Game application failed to initialize!");
         return false;
     }
     
@@ -48,7 +53,11 @@ void CFunkinEngineLoop::Tick()
 
 void CFunkinEngineLoop::Shutdown() const
 {
+    ENGINE_LOG_INFO_TAG("Core", "Shutting down...");
+    
     m_Application->Shutdown();
+    
+    CLogging::Shutdown();
     
     delete GFunkinEngine;
 }

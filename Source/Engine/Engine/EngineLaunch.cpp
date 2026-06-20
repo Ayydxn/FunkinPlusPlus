@@ -9,10 +9,10 @@ int FunkinEngineMain(int ArgumentsCount, char** Arguments)
     CFunkinEngineLoop FunkinEngineLoop(Application);
         
     if (!FunkinEngineLoop.PreInitialize())
-        return -1;
+        return EXIT_FAILURE;
         
     if (!FunkinEngineLoop.Initialize())
-        return -1;
+        return EXIT_FAILURE;
         
     FunkinEngineLoop.Tick();
     FunkinEngineLoop.Shutdown();

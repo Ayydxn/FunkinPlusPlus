@@ -20,3 +20,6 @@ Makefile
 *.suo
 .vs/
 .idea/
+
+# Misc
+Logs/

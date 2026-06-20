@@ -1,3 +1,5 @@
+include "Dependencies.lua"
+
 workspace "Funkin++"
     architecture "x86_64"
     startproject "Game"
