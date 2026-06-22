@@ -12,8 +12,6 @@
 
 #include <memory>
 
-class FUNKIN_API spdlog::logger;
-
 enum class ELogType : uint8
 {
     Engine,

@@ -11,8 +11,7 @@ enum class EEventType : uint8
 
     KeyPressed, KeyReleased, KeyTyped,
     MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled,
-    WindowClose, WindowMinimize, WindowResize, WindowFocus, WindowLostFocus,
-    EnginePreInitialize, EngineInitialize, EngineUpdate, EngineFixedUpdate, EngineRender, EngineShutdown
+    WindowClose, WindowMinimize, WindowResize, WindowFocus, WindowLostFocus
 };
 
 enum EEventCategory : uint8
@@ -37,7 +36,7 @@ public:
 
     virtual EEventType GetEventType() const = 0;
     virtual const char* GetName() const = 0;
-    virtual int GetCategoryFlags() const = 0;
+    virtual int32 GetCategoryFlags() const = 0;
     virtual std::string ToString() const { return GetName(); }
 
     bool IsInCategory(EEventCategory EventCategory) const
@@ -52,13 +51,13 @@ public:
 class CEventDispatcher
 {
     template<typename EventClass>
-    using EventFunction = std::function<bool(EventClass&)>;
+    using FEventFunction = std::function<bool(EventClass&)>;
 public:
     explicit CEventDispatcher(IEvent& Event)
         : m_Event(Event) {}
 
     template<typename EventClass>
-    bool Dispatch(EventFunction<EventClass> EventFunc)
+    bool Dispatch(FEventFunction<EventClass> EventFunc)
     {
         if (m_Event.GetEventType() == EventClass::GetStaticType() && !m_Event.bIsHandled)
         {

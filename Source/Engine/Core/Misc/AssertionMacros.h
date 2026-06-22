@@ -31,8 +31,8 @@
     // This prevents the breaking of code that relies on side effects inside the assertion (e.g., function calls).
     // The (void) cast discards the resulting value, allowing the compiler to optimize out the branch entirely while keeping the expression valid.
 
-    #define assertEngine(Condition, ...) do { (void)(Condition); } while (false);
-    #define assertGame(Condition, ...) do { (void)(Condition); } while (false);
+    #define assertEngine(Condition) do { (void)(Condition); } while (false);
+    #define assertGame(Condition) do { (void)(Condition); } while (false);
 
     #define assertEnginef(Condition, Message, ...);
     #define assertGamef(Condition, Message, ...);
@@ -54,8 +54,8 @@
     // The same principle as above with the assertions.
     // Ensures that 'Condition' is still executed even when verifies are disabled while discarding the resulting value.
 
-    #define verifyEngine(Condition, ...) do { (void)(Condition); } while (false);
-    #define verifyGame(Condition, ...) do { (void)(Condition); } while (false);
+    #define verifyEngine(Condition) do { (void)(Condition); } while (false);
+    #define verifyGame(Condition) do { (void)(Condition); } while (false);
 
     #define verifyEnginef(Condition, Message, ...) do { (void)(Condition); } while (false);
     #define verifyGamef(Condition, Message, ...) do { (void)(Condition); } while (false);
