@@ -1,7 +1,10 @@
 ﻿#include "FunkinPCH.h"
 #include "FunkinLoop.h"
+
+#include "Events/KeyboardEvents.h"
 #include "Events/WindowEvents.h"
 #include "Logging/Logging.h"
+#include "Misc/CommandLine.h"
 
 bool CFunkinLoop::PreInitialize()
 {
@@ -16,7 +19,7 @@ bool CFunkinLoop::Initialize()
 {
     LOG_INFO_TAG("Core", "Starting Friday Night Funkin++...");
     
-    if (!m_Application.Initialize(m_EngineContext))
+    if (!m_Application.Initialize(m_EngineContext, BuildWindowSpecification()))
         return false;
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
@@ -38,6 +41,8 @@ void CFunkinLoop::Tick()
 
 void CFunkinLoop::Shutdown()
 {
+    LOG_INFO_TAG("Core", "Shutting down...");
+    
     FEngineDelegates::ShutdownDelegate.Broadcast();
     
     m_EngineContext.GetEventBroadcaster().RemoveListener(m_ListenerHandle);
@@ -50,10 +55,55 @@ void CFunkinLoop::Shutdown()
 void CFunkinLoop::OnEvent(IEvent& Event)
 {
     CEventDispatcher Dispatcher(Event);
-    Dispatcher.Dispatch<CWindowCloseEvent>([this](CWindowCloseEvent&)
+    Dispatcher.Dispatch<CWindowCloseEvent>([this](const CWindowCloseEvent& WindowCloseEvent)
     {
-        bIsRunning = false;
+        if (WindowCloseEvent.GetSourceWindowID() == m_Application.GetMainWindow().GetNativeWindowID())
+        {
+            bIsRunning = false;
+            return true;
+        }
+        
+        // CWindowCloseEvent should never hold a CWindow object.
+        // So, we use the window ID as a means of getting and destroying the correct window.
+        m_Application.DestroyWindowByID(WindowCloseEvent.GetSourceWindowID());
         
         return true; 
     });
+}
+
+FWindowSpecification CFunkinLoop::BuildWindowSpecification() const
+{
+    FWindowSpecification WindowSpecification = {};
+    
+    if (WindowSpecification.WindowMode == EWindowMode::Windowed || WindowSpecification.WindowMode == EWindowMode::Fullscreen)
+    {
+        int32 CmdLineWindowWidth = 0;
+        int32 CmdLineWindowHeight = 0;
+
+        if (CCommandLine::Get().Value("ResolutionX", &CmdLineWindowWidth))
+        {
+            if (CmdLineWindowWidth != 0)
+                WindowSpecification.Width = CmdLineWindowWidth;
+        }
+
+        if (CCommandLine::Get().Value("ResolutionY", &CmdLineWindowHeight))
+        {
+            if (CmdLineWindowHeight != 0)
+                WindowSpecification.Height = CmdLineWindowHeight;
+        }
+    }
+    
+    if (CCommandLine::Get().Flag("windowed"))
+        WindowSpecification.WindowMode = EWindowMode::Windowed;
+    
+    if (CCommandLine::Get().Flag("windowedFullscreen"))
+        WindowSpecification.WindowMode = EWindowMode::WindowedFullscreen;
+    
+    if (CCommandLine::Get().Flag("fullscreen"))
+        WindowSpecification.WindowMode = EWindowMode::Fullscreen;
+    
+    if (CCommandLine::Get().Flag("vsync"))
+        WindowSpecification.bEnableVSync = true;
+    
+    return WindowSpecification;
 }

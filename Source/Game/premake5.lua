@@ -5,7 +5,7 @@ project "Game"
     pchsource "%{SourceDir}/Game/FunkinPCH.cpp"
     pchheader "FunkinPCH.h"
     
-    IncludeDependencies({ "spdlog" })
+    IncludeDependencies({ "spdlog", "SDL3" })
 
     files
     {
@@ -21,7 +21,9 @@ project "Game"
     
     defines
     {
-        'PROJECT_ROOT="%{wks.location}"'
+        'PROJECT_ROOT="%{wks.location}"',
+        
+        "SDL_MAIN_DEFINED"
     }
 
     filter "configurations:Distribution"
@@ -29,5 +31,9 @@ project "Game"
 
     filter "system:windows"
         entrypoint "WinMainCRTStartup"
-        
         targetname "FunkinPlusPlus-Win64-%{cfg.buildcfg}"
+        
+        postbuildcommands
+        {
+            '{COPYFILE} "%{wks.location}/Source/ThirdParty/SDL3/Binaries/Win64/*.dll" "%{cfg.buildtarget.directory}"'
+        }

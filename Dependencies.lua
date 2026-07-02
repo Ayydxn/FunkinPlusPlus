@@ -228,4 +228,15 @@ Register("spdlog", {
     IncludePaths = { ThirdPartyFolder .. "spdlog/include" }
 })
 
+Register("SDL3", {
+    IncludePaths = { ThirdPartyFolder .. "SDL3/Include" },
+    
+    Platforms = {
+        Windows = {
+            LibraryPaths = { ThirdPartyFolder .. "SDL3/Lib/Win64" },
+            Links = { ThirdPartyFolder .. "SDL3/Lib/Win64/SDL3.lib" }
+        }
+    }
+})
+
 ListDependencies()

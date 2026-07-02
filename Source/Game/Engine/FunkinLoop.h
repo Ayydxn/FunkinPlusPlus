@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "EngineContext.h"
-#include "Application/PlatformApplication.h"
+#include "Application/Application.h"
 #include "Events/Event.h"
 
 class CFunkinLoop
@@ -13,9 +13,11 @@ public:
     void Shutdown();
 private:
     void OnEvent(IEvent& Event);
+    
+    FWindowSpecification BuildWindowSpecification() const;
 private:
     CEngineContext m_EngineContext;
-    FPlatformApplication m_Application;
+    CApplication m_Application;
 
     CEventBroadcaster::FListenerHandle m_ListenerHandle = 0;
 

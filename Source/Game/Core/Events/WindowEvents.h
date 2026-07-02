@@ -7,12 +7,17 @@
 class CWindowCloseEvent final : public IEvent
 {
 public:
-    CWindowCloseEvent() = default;
+    CWindowCloseEvent(uint32 SourceWindowID)
+        : m_SourceWindowID(SourceWindowID) {}
+    
+    uint32 GetSourceWindowID() const { return m_SourceWindowID; }
 
     std::string ToString() const override { return "WindowCloseEvent"; }
 
     SET_CLASS_EVENT_TYPE(WindowClose)
     SET_CLASS_EVENT_CATEGORY(EngineCategory)
+private:
+    uint32 m_SourceWindowID = -1;
 };
 
 class CWindowMinimizeEvent final : public IEvent
