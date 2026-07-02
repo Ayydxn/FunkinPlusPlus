@@ -120,6 +120,5 @@ workspace "Funkin++"
     filter {}
 
 group "Core"
-    include "Source/Engine"
     include "Source/Game"
 group ""

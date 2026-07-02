@@ -1,6 +1,11 @@
 project "Game"
     kind "ConsoleApp"
     language "C++"
+    
+    pchsource "%{SourceDir}/Game/FunkinPCH.cpp"
+    pchheader "FunkinPCH.h"
+    
+    IncludeDependencies({ "spdlog" })
 
     files
     {
@@ -11,13 +16,12 @@ project "Game"
     includedirs
     {
         "%{SourceDir}/Game",
-        
-        "%{SourceDir}/Engine"
+        "%{SourceDir}/Game/Core"
     }
-
-    links
+    
+    defines
     {
-        "Engine"
+        'PROJECT_ROOT="%{wks.location}"'
     }
 
     filter "configurations:Distribution"

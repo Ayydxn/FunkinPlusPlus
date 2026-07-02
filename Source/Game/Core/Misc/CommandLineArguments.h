@@ -1,9 +1,8 @@
 ﻿#pragma once
 
-#include "Core/CoreDefines.h"
 #include "Core/CoreTypes.h"
 
-class FUNKIN_API CCommandLineArguments
+class CCommandLineArguments
 {
 public:
     CCommandLineArguments(int32 ArgumentCount, char** Arguments);

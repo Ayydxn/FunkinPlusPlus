@@ -1,12 +1,10 @@
 ﻿#pragma once
 
-#include "Core/CoreDefines.h"
-
 #include <functional>
 #include <vector>
 
 template<typename... Args>
-class FUNKIN_API TMulticastDelegate
+class TMulticastDelegate
 {
 public:
     using FDelegateFunction = std::function<void(Args...)>;

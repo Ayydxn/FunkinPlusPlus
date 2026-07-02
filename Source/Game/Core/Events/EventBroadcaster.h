@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Event.h"
 
-class FUNKIN_API CEventBroadcaster
+class CEventBroadcaster
 {
 public:
     using FListenerFunction = std::function<void(IEvent&)>;

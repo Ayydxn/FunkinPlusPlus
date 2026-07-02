@@ -2,7 +2,7 @@
 
 #include "CommandLineArguments.h"
 
-class FUNKIN_API CCommandLineParser
+class CCommandLineParser
 {
 public:
     static bool Flag(const CCommandLineArguments& CommandLineArguments, const std::string& Argument);

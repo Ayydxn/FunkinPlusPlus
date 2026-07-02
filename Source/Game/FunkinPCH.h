@@ -25,7 +25,6 @@
 #include <utility>
 #include <vector>
 
-#include "Core/CoreDefines.h"
 #include "Core/CoreTypes.h"
 #include "Core/Misc/AssertionMacros.h"
 
