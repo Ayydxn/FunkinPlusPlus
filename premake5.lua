@@ -122,3 +122,7 @@ workspace "Funkin++"
 group "Core"
     include "Source/Game"
 group ""
+
+group "Dependencies"
+    include "Source/ThirdParty/tracy"
+group ""

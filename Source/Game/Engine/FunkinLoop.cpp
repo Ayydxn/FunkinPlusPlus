@@ -1,7 +1,6 @@
 ﻿#include "FunkinPCH.h"
 #include "FunkinLoop.h"
-
-#include "Events/KeyboardEvents.h"
+#include "Debug/Profiler.h"
 #include "Events/WindowEvents.h"
 #include "Logging/Logging.h"
 #include "Misc/CommandLine.h"
@@ -35,7 +34,12 @@ void CFunkinLoop::Tick()
 {
     while (bIsRunning)
     {
+        FUNKIN_PROFILE_SCOPE(__FUNCTION__)
+        
         m_Application.PumpMessages();
+        
+        // TODO: (Ayydxn) Once we actually have "rendering" and "presenting", move this call there.
+        FUNKIN_PROFILE_MARK_FRAME;
     }
 }
 

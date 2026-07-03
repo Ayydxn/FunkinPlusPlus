@@ -239,4 +239,10 @@ Register("SDL3", {
     }
 })
 
+Register("tracy", {
+    IncludePaths = { ThirdPartyFolder .. "tracy/public" },
+    
+    Links = { "tracy" }
+})
+
 ListDependencies()

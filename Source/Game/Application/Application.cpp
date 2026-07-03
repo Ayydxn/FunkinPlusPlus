@@ -1,5 +1,6 @@
 ﻿#include "FunkinPCH.h"
 #include "Application.h"
+#include "Debug/Profiler.h"
 
 #include <SDL3/SDL.h>
 
@@ -34,6 +35,8 @@ void CApplication::Shutdown()
 
 void CApplication::PumpMessages()
 {
+    FUNKIN_PROFILE_FUNCTION()
+    
     SDL_Event Event;
     while (SDL_PollEvent(&Event))
     {

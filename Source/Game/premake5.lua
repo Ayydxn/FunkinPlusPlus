@@ -5,7 +5,7 @@ project "Game"
     pchsource "%{SourceDir}/Game/FunkinPCH.cpp"
     pchheader "FunkinPCH.h"
     
-    IncludeDependencies({ "spdlog", "SDL3" })
+    IncludeDependencies({ "spdlog", "SDL3", "tracy" })
 
     files
     {
@@ -25,6 +25,13 @@ project "Game"
         
         "SDL_MAIN_DEFINED"
     }
+    
+    filter "configurations:Debug or configurations:Development or configurations:Release"
+        defines
+        {
+            "TRACY_ENABLE",
+            "TRACY_ON_DEMAND"
+        }
 
     filter "configurations:Distribution"
         kind "WindowedApp"
