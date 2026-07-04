@@ -1,26 +1,27 @@
 ﻿#pragma once
 
 #include "Event.h"
+#include "Input/CoreInputTypes.h"
 
 #include <sstream>
 
 class CKeyboardEvent : public IEvent
 {
 public:
-    uint32 GetKey() const { return m_Key; }
+    const FKey& GetKey() const { return m_Key; }
 
     SET_CLASS_EVENT_CATEGORY(InputCategory | KeyboardCategory)
 protected:
-    explicit CKeyboardEvent(const uint32& Key)
+    explicit CKeyboardEvent(const FKey& Key)
         : m_Key(Key) {}
 
-    uint32 m_Key;
+    FKey m_Key;
 };
 
 class CKeyPressedEvent final : public CKeyboardEvent
 {
 public:
-    CKeyPressedEvent(uint32 Key, bool bInIsHeldDown, uint64 InTimestampNs)
+    CKeyPressedEvent(const FKey& Key, bool bInIsHeldDown, uint64 InTimestampNs)
         : CKeyboardEvent(Key), bIsHeldDown(bInIsHeldDown)
     {
         TimestampNs = InTimestampNs;
@@ -31,7 +32,7 @@ public:
     std::string ToString() const override
     {
         std::stringstream Stream;
-        Stream << "KeyPressedEvent: " << m_Key << " (Held: " << (bIsHeldDown ? "True" : "False") << ", Timestamp: " << TimestampNs << "ns)";
+        Stream << "KeyPressedEvent: " << m_Key.GetDisplayName() << " (Held: " << (bIsHeldDown ? "True" : "False") << ", Timestamp: " << TimestampNs << "ns)";
 
         return Stream.str();
     }
@@ -44,7 +45,7 @@ private:
 class CKeyReleasedEvent final : public CKeyboardEvent
 {
 public:
-    CKeyReleasedEvent(uint32 Key, uint64 InTimestampNs)
+    CKeyReleasedEvent(const FKey& Key, uint64 InTimestampNs)
         : CKeyboardEvent(Key)
     {
         TimestampNs = InTimestampNs;
@@ -53,18 +54,18 @@ public:
     std::string ToString() const override
     {
         std::stringstream Stream;
-        Stream << "KeyReleasedEvent: " << m_Key << " (Timestamp: " << TimestampNs << "ns)";
+        Stream << "KeyReleasedEvent: " << m_Key.GetDisplayName() << " (Timestamp: " << TimestampNs << "ns)";
         return Stream.str();
     }
 
     SET_CLASS_EVENT_TYPE(KeyReleased)
 };
 
-class CKeyTypedEvent final : public CKeyboardEvent
+class CKeyTypedEvent final : public IEvent
 {
 public:
-    CKeyTypedEvent(uint32 KeyCode, uint64 InTimestampNs)
-        : CKeyboardEvent(-1), m_KeyCode(KeyCode)
+    CKeyTypedEvent(uint32 Codepoint, uint64 InTimestampNs)
+        : m_Codepoint(Codepoint)
     {
         TimestampNs = InTimestampNs;
     }
@@ -72,12 +73,12 @@ public:
     std::string ToString() const override
     {
         std::stringstream Stream;
-        Stream << "KeyTypedEvent: " << m_KeyCode;
+        Stream << "KeyTypedEvent: " << m_Codepoint;
         return Stream.str();
     }
 
     SET_CLASS_EVENT_TYPE(KeyTyped)
-
+    SET_CLASS_EVENT_CATEGORY(InputCategory | KeyboardCategory)
 private:
-    uint32 m_KeyCode;
+    uint32 m_Codepoint;
 };

@@ -7,20 +7,20 @@
 class CMouseButtonEvent : public IEvent
 {
 public:
-    uint32 GetMouseButton() const { return m_MouseButton; }
+    const FKey& GetMouseButton() const { return m_MouseButton; }
 
     SET_CLASS_EVENT_CATEGORY(InputCategory | MouseCategory | MouseButtonCategory)
 protected:
-    CMouseButtonEvent(const uint32& MouseButton)
+    CMouseButtonEvent(const FKey& MouseButton)
         : m_MouseButton(MouseButton) {}
 
-    uint32 m_MouseButton;
+    FKey m_MouseButton;
 };
 
 class CMouseButtonPressedEvent final : public CMouseButtonEvent
 {
 public:
-    CMouseButtonPressedEvent(uint32 MouseButton, uint64 InTimestampNs)
+    CMouseButtonPressedEvent(const FKey& MouseButton, uint64 InTimestampNs)
         : CMouseButtonEvent(MouseButton)
     {
         TimestampNs = InTimestampNs;
@@ -29,7 +29,7 @@ public:
     std::string ToString() const override
     {
         std::stringstream StringStream;
-        StringStream << "MouseButtonPressedEvent: " << m_MouseButton << " (Timestamp: " << TimestampNs << "ns)";
+        StringStream << "MouseButtonPressedEvent: " << m_MouseButton.GetDisplayName() << " (Timestamp: " << TimestampNs << "ns)";
         return StringStream.str();
     }
 
@@ -39,7 +39,7 @@ public:
 class CMouseButtonReleasedEvent final : public CMouseButtonEvent
 {
 public:
-    CMouseButtonReleasedEvent(uint32 MouseButton, uint64 InTimestampNs)
+    CMouseButtonReleasedEvent(const FKey& MouseButton, uint64 InTimestampNs)
         : CMouseButtonEvent(MouseButton)
     {
         TimestampNs = InTimestampNs;
@@ -48,7 +48,7 @@ public:
     std::string ToString() const override
     {
         std::stringstream StringStream;
-        StringStream << "MouseButtonReleasedEvent: " << m_MouseButton << " (Timestamp: " << TimestampNs << "ns)";
+        StringStream << "MouseButtonReleasedEvent: " << m_MouseButton.GetDisplayName() << " (Timestamp: " << TimestampNs << "ns)";
         return StringStream.str();
     }
 

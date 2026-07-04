@@ -6,6 +6,116 @@
 
 #include <SDL3/SDL.h>
 
+namespace
+{
+    uint32 SDLKeycodeToFunkinKeyCode(SDL_Keycode Key)
+    {
+        // Letters: SDL lowercase -> engine uppercase ASCII
+        if (Key >= SDLK_A && Key <= SDLK_Z)
+            return Key - 32; // 'a'(97) -> 'A'(65)
+    
+        // Printable ASCII that match directly (space=32, digits=48-57, punctuation)
+        if (Key == SDLK_SPACE) return 0x20;
+        if (Key == SDLK_APOSTROPHE) return 0x27;
+        if (Key == SDLK_COMMA) return 0x2C;
+        if (Key == SDLK_MINUS) return 0x2D;
+        if (Key == SDLK_PERIOD) return 0x2E;
+        if (Key == SDLK_SLASH) return 0x2F;
+        if (Key >= SDLK_0 && Key <= SDLK_9) return Key; // 0x30-0x39
+        if (Key == SDLK_SEMICOLON) return 0x3B;
+        if (Key == SDLK_EQUALS) return 0x3D;
+        if (Key == SDLK_LEFTBRACKET) return 0x5B;
+        if (Key == SDLK_BACKSLASH) return 0x5C;
+        if (Key == SDLK_RIGHTBRACKET) return 0x5D;
+        if (Key == SDLK_GRAVE) return 0x60;
+    
+        // Navigation / function keys -> engine 0x100+ range (mirrors GLFW_KEY_* values)
+        switch (Key)
+        {
+            case SDLK_ESCAPE: return 0x100;
+            case SDLK_RETURN: return 0x101;
+            case SDLK_TAB: return 0x102;
+            case SDLK_BACKSPACE: return 0x103;
+            case SDLK_INSERT: return 0x104;
+            case SDLK_DELETE: return 0x105;
+            case SDLK_RIGHT: return 0x106;
+            case SDLK_LEFT: return 0x107;
+            case SDLK_DOWN: return 0x108;
+            case SDLK_UP: return 0x109;
+            case SDLK_PAGEUP: return 0x10A;
+            case SDLK_PAGEDOWN: return 0x10B;
+            case SDLK_HOME: return 0x10C;
+            case SDLK_END: return 0x10D;
+            case SDLK_CAPSLOCK: return 0x118;
+            case SDLK_SCROLLLOCK: return 0x119;
+            case SDLK_NUMLOCKCLEAR: return 0x11A;
+            case SDLK_PRINTSCREEN: return 0x11B;
+            case SDLK_PAUSE: return 0x11C;
+            case SDLK_F1: return 0x122;
+            case SDLK_F2: return 0x123;
+            case SDLK_F3: return 0x124;
+            case SDLK_F4: return 0x125;
+            case SDLK_F5: return 0x126;
+            case SDLK_F6: return 0x127;
+            case SDLK_F7: return 0x128;
+            case SDLK_F8: return 0x129;
+            case SDLK_F9: return 0x12A;
+            case SDLK_F10: return 0x12B;
+            case SDLK_F11: return 0x12C;
+            case SDLK_F12: return 0x12D;
+            case SDLK_F13: return 0x12E;
+            case SDLK_F14: return 0x12F;
+            case SDLK_F15: return 0x130;
+            case SDLK_F16: return 0x131;
+            case SDLK_F17: return 0x132;
+            case SDLK_F18: return 0x133;
+            case SDLK_F19: return 0x134;
+            case SDLK_F20: return 0x135;
+            case SDLK_F21: return 0x136;
+            case SDLK_F22: return 0x137;
+            case SDLK_F23: return 0x138;
+            case SDLK_F24: return 0x139;
+            case SDLK_KP_0: return 0x140;
+            case SDLK_KP_1: return 0x141;
+            case SDLK_KP_2: return 0x142;
+            case SDLK_KP_3: return 0x143;
+            case SDLK_KP_4: return 0x144;
+            case SDLK_KP_5: return 0x145;
+            case SDLK_KP_6: return 0x146;
+            case SDLK_KP_7: return 0x147;
+            case SDLK_KP_8: return 0x148;
+            case SDLK_KP_9: return 0x149;
+            case SDLK_KP_PERIOD: return 0x14A;
+            case SDLK_KP_DIVIDE: return 0x14B;
+            case SDLK_KP_MULTIPLY: return 0x14C;
+            case SDLK_KP_MINUS: return 0x14D;
+            case SDLK_KP_PLUS: return 0x14E;
+            case SDLK_KP_ENTER: return 0x14F;
+            case SDLK_LSHIFT: return 0x154;
+            case SDLK_LCTRL: return 0x155;
+            case SDLK_LALT: return 0x156;
+            case SDLK_LGUI: return 0x157;
+            case SDLK_RSHIFT: return 0x158;
+            case SDLK_RCTRL: return 0x159;
+            case SDLK_RALT: return 0x15A;
+            case SDLK_RGUI: return 0x15B;
+            default: return FKey::InvalidKeyCode;
+        }
+    }
+    
+    FKey SDLKeycodeToFunkinKey(SDL_Keycode Key)
+    {
+        return FKey::GetKeyFromKeyCode(SDLKeycodeToFunkinKeyCode(Key));
+    }
+
+    FKey SDLMouseButtonToKey(uint8 SDLButton)
+    {
+        // SDL3 buttons are 1-based (LEFT=1, MIDDLE=2, RIGHT=3, X1=4, X2=5).
+        // Engine mouse button codes are 0-based, so we subtract it by 1 to prevent mismatches and errors because a keycode with 5 as a value doesn't exist.
+        return FKey::GetKeyFromKeyCode(static_cast<uint32>(SDLButton - 1));
+    }
+}
+
 CWindow::~CWindow()
 {
     Destroy();
@@ -63,7 +173,7 @@ void CWindow::HandleNativeEvent(const SDL_Event& NativeEvent, uint64 CaptureTime
     {
         case SDL_EVENT_KEY_DOWN:
         {
-            CKeyPressedEvent KeyPressedEvent(NativeEvent.key.key, NativeEvent.key.repeat, CaptureTimestampNs);
+            CKeyPressedEvent KeyPressedEvent(SDLKeycodeToFunkinKey(NativeEvent.key.key), NativeEvent.key.repeat, CaptureTimestampNs);
             m_WindowState.EventCallbackFunction(KeyPressedEvent);
             
             break;
@@ -71,7 +181,7 @@ void CWindow::HandleNativeEvent(const SDL_Event& NativeEvent, uint64 CaptureTime
             
         case SDL_EVENT_KEY_UP:
         {
-            CKeyReleasedEvent KeyReleasedEvent(NativeEvent.key.key, CaptureTimestampNs);
+            CKeyReleasedEvent KeyReleasedEvent(SDLKeycodeToFunkinKey(NativeEvent.key.key), CaptureTimestampNs);
             m_WindowState.EventCallbackFunction(KeyReleasedEvent);
             
             break;
@@ -90,7 +200,7 @@ void CWindow::HandleNativeEvent(const SDL_Event& NativeEvent, uint64 CaptureTime
             
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         {
-            CMouseButtonPressedEvent MouseButtonPressedEvent(NativeEvent.button.button, CaptureTimestampNs);
+            CMouseButtonPressedEvent MouseButtonPressedEvent(SDLKeycodeToFunkinKey(NativeEvent.button.button), CaptureTimestampNs);
             m_WindowState.EventCallbackFunction(MouseButtonPressedEvent);
             
             break;
@@ -98,7 +208,7 @@ void CWindow::HandleNativeEvent(const SDL_Event& NativeEvent, uint64 CaptureTime
             
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
-            CMouseButtonReleasedEvent MouseButtonReleasedEvent(NativeEvent.button.button, CaptureTimestampNs);
+            CMouseButtonReleasedEvent MouseButtonReleasedEvent(SDLKeycodeToFunkinKey(NativeEvent.button.button), CaptureTimestampNs);
             m_WindowState.EventCallbackFunction(MouseButtonReleasedEvent);
             
             break;

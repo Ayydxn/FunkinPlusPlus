@@ -1,6 +1,7 @@
 ﻿#include "FunkinPCH.h"
 #include "Application.h"
 #include "Debug/Profiler.h"
+#include "Events/GamepadEvents.h"
 
 #include <SDL3/SDL.h>
 
@@ -42,6 +43,24 @@ void CApplication::PumpMessages()
     {
         const uint64 CaptureTimestampNs = SDL_GetTicksNS();
         const uint32 WindowID = Event.window.windowID;
+        
+        if (Event.type == SDL_EVENT_GAMEPAD_ADDED)
+        {
+            CGamepadConnectedEvent GamepadConnectedEvent(Event.gdevice.which);
+            GamepadConnectedEvent.TimestampNs = CaptureTimestampNs;
+            
+            m_EngineContext->GetEventBroadcaster().Broadcast(GamepadConnectedEvent);
+            continue;
+        }
+
+        if (Event.type == SDL_EVENT_GAMEPAD_REMOVED)
+        {
+            CGamepadDisconnectedEvent GamepadDisconnectedEvent(Event.gdevice.which);
+            GamepadDisconnectedEvent.TimestampNs = CaptureTimestampNs;
+            
+            m_EngineContext->GetEventBroadcaster().Broadcast(GamepadDisconnectedEvent);
+            continue;
+        }
         
         if (WindowID == m_MainWindow->GetNativeWindowID())
         {

@@ -18,6 +18,8 @@ bool CFunkinLoop::Initialize()
 {
     LOG_INFO_TAG("Core", "Starting Friday Night Funkin++...");
     
+    m_EngineContext.Initialize();
+    
     if (!m_Application.Initialize(m_EngineContext, BuildWindowSpecification()))
         return false;
     
@@ -36,7 +38,11 @@ void CFunkinLoop::Tick()
     {
         FUNKIN_PROFILE_SCOPE(__FUNCTION__)
         
+        m_EngineContext.GetInputState().BeginFrame();
+        
         m_Application.PumpMessages();
+        
+        m_EngineContext.GetInputState().EndFrame();
         
         // TODO: (Ayydxn) Once we actually have "rendering" and "presenting", move this call there.
         FUNKIN_PROFILE_MARK_FRAME;
@@ -50,6 +56,7 @@ void CFunkinLoop::Shutdown()
     FEngineDelegates::ShutdownDelegate.Broadcast();
     
     m_EngineContext.GetEventBroadcaster().RemoveListener(m_ListenerHandle);
+    m_EngineContext.Shutdown();
     
     m_Application.Shutdown();
     

@@ -11,6 +11,7 @@ enum class EEventType : uint8
 
     KeyPressed, KeyReleased, KeyTyped,
     MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled,
+    GamepadConnected, GamepadDisconnected,
     WindowClose, WindowMinimize, WindowResize, WindowFocus, WindowLostFocus
 };
 
@@ -20,7 +21,8 @@ enum EEventCategory : uint8
     InputCategory       = 1u << 1,
     KeyboardCategory    = 1u << 2,
     MouseCategory       = 1u << 3,
-    MouseButtonCategory = 1u << 4
+    MouseButtonCategory = 1u << 4,
+    GamepadCategory     = 1u << 5
 };
 
 #define SET_CLASS_EVENT_TYPE(Type) static EEventType GetStaticType() { return EEventType::Type; }\
