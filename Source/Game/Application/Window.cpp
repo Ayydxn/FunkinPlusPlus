@@ -355,6 +355,19 @@ void CWindow::SetTitle(const std::string& Title)
     m_WindowState.Title = Title;
 }
 
+float CWindow::GetDisplayRefreshRate() const
+{
+    const SDL_DisplayID WindowDisplayID = SDL_GetDisplayForWindow(m_WindowHandle);
+    if (WindowDisplayID == 0)
+        return 0.0f;
+
+    const SDL_DisplayMode* DisplayMode = SDL_GetCurrentDisplayMode(WindowDisplayID);
+    if (!DisplayMode)
+        return 0.0f;
+
+    return DisplayMode->refresh_rate;
+}
+
 FNativeWindowHandle CWindow::GetNativeHandle() const
 {
     FNativeWindowHandle NativeWindowHandle;

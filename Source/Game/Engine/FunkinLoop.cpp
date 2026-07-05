@@ -25,6 +25,8 @@ bool CFunkinLoop::Initialize()
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
     
+    m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
+    
     FEngineDelegates::InitializeDelegate.Broadcast();
     
     bIsRunning = true;
@@ -36,16 +38,34 @@ void CFunkinLoop::Tick()
 {
     while (bIsRunning)
     {
-        FUNKIN_PROFILE_SCOPE(__FUNCTION__)
+        m_FramePacer.WaitForNextDeadline();
         
-        m_EngineContext.GetInputState().BeginFrame();
+        if (m_FramePacer.IsTickDue())
+        {
+            FUNKIN_PROFILE_SCOPE("Tick")
+            
+            m_EngineContext.GetInputState().BeginFrame();
         
-        m_Application.PumpMessages();
+            m_Application.PumpMessages();
         
-        m_EngineContext.GetInputState().EndFrame();
+            m_EngineContext.GetInputState().EndFrame();
+            
+            // TODO: (Ayydxn) Stuff related to gameplay goes here.
+            
+            m_FramePacer.OnTickExecuted();
+        }
         
-        // TODO: (Ayydxn) Once we actually have "rendering" and "presenting", move this call there.
-        FUNKIN_PROFILE_MARK_FRAME;
+        if (m_FramePacer.IsRenderDue())
+        {
+            FUNKIN_PROFILE_SCOPE("Render")
+            
+            m_FramePacer.OnRenderExecuted();
+            
+            // TODO: (Ayydxn) Once we actually have "rendering" and "presenting", move this call there.
+            FUNKIN_PROFILE_MARK_FRAME;
+        }
+        
+        m_EngineContext.SetFrameStats(m_FramePacer.GetFrameStats());
     }
 }
 
@@ -117,4 +137,17 @@ FWindowSpecification CFunkinLoop::BuildWindowSpecification() const
         WindowSpecification.bEnableVSync = true;
     
     return WindowSpecification;
+}
+
+double CFunkinLoop::ResolveDefaultRenderIntervalSeconds() const
+{
+    constexpr double FallbackFramerate = 240.0;
+
+    const float RefreshRate = m_Application.GetMainWindow().GetDisplayRefreshRate();
+    if (RefreshRate > 0.0f)
+        return 1.0 / static_cast<double>(RefreshRate);
+
+    LOG_WARN_TAG("Core", "Failed to query display refresh rate, falling back to {} FPS cap.", FallbackFramerate);
+    
+    return 1.0 / FallbackFramerate;
 }

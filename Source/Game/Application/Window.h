@@ -80,6 +80,8 @@ public:
     
     const FWindowSpecification& GetSpecification() const { return m_Specification; }
 
+    float GetDisplayRefreshRate() const;
+    
     FNativeWindowHandle GetNativeHandle() const;
     uint32 GetNativeWindowID() const { return m_WindowID; }
 protected:

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "FramePacer.h"
 #include "Delegates/MulticastDelegate.h"
 #include "Events/EventBroadcaster.h"
 #include "Input/InputState.h"
@@ -17,9 +18,15 @@ public:
 
     CEventBroadcaster& GetEventBroadcaster() { return m_EventBroadcaster; }
     CInputState& GetInputState() { return m_InputState; }
+    const FFrameStats& GetFrameStats() const { return m_FrameStats; }
+private:
+    void SetFrameStats(const FFrameStats& FrameStats) { m_FrameStats = FrameStats; }
 private:
     CEventBroadcaster m_EventBroadcaster;
     CInputState m_InputState;
+    FFrameStats m_FrameStats;
+    
+    friend class CFunkinLoop;
 };
 
 struct FEngineDelegates
