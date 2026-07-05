@@ -25,6 +25,7 @@ bool CFunkinLoop::Initialize()
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
     
+    // TODO: (Ayydxn) Once a config file for game settings exists, prefer a user-set max FPS from it over the display refresh rate query below.
     m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
     
     FEngineDelegates::InitializeDelegate.Broadcast();

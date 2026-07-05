@@ -3,6 +3,7 @@
 #include "CoreInputTypes.h"
 #include "GamepadTypes.h"
 #include "InputBindings.h"
+#include "TimestampedInputEvent.h"
 #include "Core/Events/EventBroadcaster.h"
 
 #include <string>
@@ -76,6 +77,12 @@ public:
     void RegisterAxis(const std::string& AxisName, const FInputAxisBinding& Binding) { m_AxisBindings[AxisName].push_back(Binding); }
     void UnregisterAxis(const std::string& AxisName) { m_AxisBindings.erase(AxisName); }
     float GetAxis(const std::string& AxisName) const;
+    
+    /*----------------------------*/
+    /* -- Timestamped Events  -- */
+    /*----------------------------*/
+    
+    const std::vector<FTimestampedInputEvent>& GetTickEvents() const { return m_TickEvents; }
 private:
     void OnEvent(IEvent& Event);
 
@@ -84,10 +91,15 @@ private:
 
     void OnGamepadConnected(uint32 GamepadID);
     void OnGamepadDisconnected(uint32 GamepadID);
+    void OnGamepadButtonChanged(uint32 GamepadID, EGamepadButton Button, bool bPressed, uint64 TimestampNs);
+    int32 FindGamepadSlotByID(uint32 GamepadID) const;
 
     void TransitionPressedKeys();
     void TransitionPressedMouseButtons();
+    void TransitionPressedGamepadButtons();
+    
     void ClearReleasedKeys();
+    void ClearReleasedGamepadButtons();
 
     void PollGamepads();
     static bool IsValidGamepadIndex(int32 Index) { return Index >= 0 && Index < GMaxGamepadCount; }
@@ -104,4 +116,6 @@ private:
 
     std::unordered_map<std::string, std::vector<FInputActionBinding>> m_ActionBindings;
     std::unordered_map<std::string, std::vector<FInputAxisBinding>> m_AxisBindings;
+    
+    std::vector<FTimestampedInputEvent> m_TickEvents;
 };

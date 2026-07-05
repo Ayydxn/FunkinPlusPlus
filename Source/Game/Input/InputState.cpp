@@ -41,8 +41,11 @@ void CInputState::BeginFrame()
     m_MouseState.ScrollX = 0.0f;
     m_MouseState.ScrollY = 0.0f;
 
+    m_TickEvents.clear();
+    
     TransitionPressedKeys();
     TransitionPressedMouseButtons();
+    TransitionPressedGamepadButtons();
     PollGamepads();
 }
 
@@ -54,6 +57,7 @@ void CInputState::EndFrame()
     m_MouseState.DeltaY = 0.0f;
 
     ClearReleasedKeys();
+    ClearReleasedGamepadButtons();
 }
 
 /*----------------*/
@@ -229,6 +233,17 @@ void CInputState::OnEvent(IEvent& Event)
     Dispatcher.Dispatch<CKeyPressedEvent>([this](const CKeyPressedEvent& KeyPressedEvent)
     {
         UpdateKeyState(KeyPressedEvent.GetKey(), EKeyState::Pressed);
+
+        if (!KeyPressedEvent.IsKeyHeldDown())
+        {
+            FTimestampedInputEvent TimestampedInputEvent;
+            TimestampedInputEvent.SourceType = FTimestampedInputEvent::ESourceType::Key;
+            TimestampedInputEvent.bPressed = true;
+            TimestampedInputEvent.Key = KeyPressedEvent.GetKey();
+            TimestampedInputEvent.TimestampNs = KeyPressedEvent.TimestampNs;
+
+            m_TickEvents.push_back(TimestampedInputEvent);
+        }
         
         return false;
     });
@@ -236,6 +251,14 @@ void CInputState::OnEvent(IEvent& Event)
     Dispatcher.Dispatch<CKeyReleasedEvent>([this](const CKeyReleasedEvent& KeyReleasedEvent)
     {
         UpdateKeyState(KeyReleasedEvent.GetKey(), EKeyState::Released);
+        
+        FTimestampedInputEvent TimestampedInputEvent;
+        TimestampedInputEvent.SourceType = FTimestampedInputEvent::ESourceType::Key;
+        TimestampedInputEvent.bPressed = false;
+        TimestampedInputEvent.Key = KeyReleasedEvent.GetKey();
+        TimestampedInputEvent.TimestampNs = KeyReleasedEvent.TimestampNs;
+
+        m_TickEvents.push_back(TimestampedInputEvent);
         
         return false;
     });
@@ -283,6 +306,20 @@ void CInputState::OnEvent(IEvent& Event)
     {
         OnGamepadDisconnected(GamepadDisconnectedEvent.GetGamepadID());
         
+        return false;
+    });
+    
+    Dispatcher.Dispatch<CGamepadButtonPressedEvent>([this](const CGamepadButtonPressedEvent& GamepadButtonPressedEvent)
+    {
+        OnGamepadButtonChanged(GamepadButtonPressedEvent.GetGamepadID(), GamepadButtonPressedEvent.GetButton(), true, GamepadButtonPressedEvent.TimestampNs);
+
+        return false;
+    });
+
+    Dispatcher.Dispatch<CGamepadButtonReleasedEvent>([this](const CGamepadButtonReleasedEvent& GamepadButtonReleasedEvent)
+    {
+        OnGamepadButtonChanged(GamepadButtonReleasedEvent.GetGamepadID(), GamepadButtonReleasedEvent.GetButton(), false, GamepadButtonReleasedEvent.TimestampNs);
+
         return false;
     });
 }
@@ -338,17 +375,48 @@ void CInputState::OnGamepadDisconnected(uint32 GamepadID)
 {
     for (int32 i = 0; i < GMaxGamepadCount; ++i)
     {
-        CGamepadState& State = m_GamepadStates[i];
-        if (State.bConnected && State.Handle && SDL_GetJoystickID(SDL_GetGamepadJoystick(State.Handle)) == GamepadID)
+        CGamepadState& GamepadState = m_GamepadStates[i];
+        if (GamepadState.bConnected && GamepadState.Handle && SDL_GetJoystickID(SDL_GetGamepadJoystick(GamepadState.Handle)) == GamepadID)
         {
-            LOG_INFO_TAG("Input", "Gamepad {} ('{}') disconnected.", i, State.Name);
+            LOG_INFO_TAG("Input", "Gamepad {} ('{}') disconnected.", i, GamepadState.Name);
 
-            SDL_CloseGamepad(State.Handle);
-            State = CGamepadState {};
+            SDL_CloseGamepad(GamepadState.Handle);
+            GamepadState = CGamepadState {};
 
             return;
         }
     }
+}
+
+void CInputState::OnGamepadButtonChanged(uint32 GamepadID, EGamepadButton Button, bool bPressed, uint64 TimestampNs)
+{
+    const int32 Slot = FindGamepadSlotByID(GamepadID);
+    if (Slot == -1)
+        return;
+
+    EKeyState& ButtonState = m_GamepadStates[Slot].ButtonStates[static_cast<uint8>(Button)];
+    ButtonState = bPressed ? EKeyState::Pressed : EKeyState::Released;
+
+    FTimestampedInputEvent TimestampedInputEvent;
+    TimestampedInputEvent.SourceType = FTimestampedInputEvent::ESourceType::GamepadButton;
+    TimestampedInputEvent.bPressed = bPressed;
+    TimestampedInputEvent.GamepadIndex = Slot;
+    TimestampedInputEvent.GamepadButton = Button;
+    TimestampedInputEvent.TimestampNs = TimestampNs;
+
+    m_TickEvents.push_back(TimestampedInputEvent);
+}
+
+int32 CInputState::FindGamepadSlotByID(uint32 GamepadID) const
+{
+    for (int32 i = 0; i < GMaxGamepadCount; ++i)
+    {
+        const CGamepadState& GamepadState = m_GamepadStates[i];
+        if (GamepadState.bConnected && GamepadState.Handle && SDL_GetJoystickID(SDL_GetGamepadJoystick(GamepadState.Handle)) == GamepadID)
+            return i;
+    }
+
+    return -1;
 }
 
 void CInputState::TransitionPressedKeys()
@@ -369,6 +437,21 @@ void CInputState::TransitionPressedMouseButtons()
     }
 }
 
+void CInputState::TransitionPressedGamepadButtons()
+{
+    for (CGamepadState& GamepadState : m_GamepadStates)
+    {
+        if (!GamepadState.bConnected)
+            continue;
+
+        for (EKeyState& ButtonState : GamepadState.ButtonStates)
+        {
+            if (ButtonState == EKeyState::Pressed)
+                ButtonState = EKeyState::Held;
+        }
+    }
+}
+
 void CInputState::ClearReleasedKeys()
 {
     for (auto& Data : m_KeyData | std::views::values)
@@ -384,6 +467,21 @@ void CInputState::ClearReleasedKeys()
     }
 }
 
+void CInputState::ClearReleasedGamepadButtons()
+{
+    for (CGamepadState& GamepadState : m_GamepadStates)
+    {
+        if (!GamepadState.bConnected)
+            continue;
+
+        for (EKeyState& ButtonState : GamepadState.ButtonStates)
+        {
+            if (ButtonState == EKeyState::Released)
+                ButtonState = EKeyState::Unknown;
+        }
+    }
+}
+
 void CInputState::PollGamepads()
 {
     FUNKIN_PROFILE_FUNCTION()
@@ -392,22 +490,7 @@ void CInputState::PollGamepads()
     {
         if (!GamepadState.bConnected || !GamepadState.Handle)
             continue;
-
-        for (uint8 ButtonIndex = 0; ButtonIndex < CGamepadState::ButtonCount; ++ButtonIndex)
-        {
-            const bool bIsButtonDown = SDL_GetGamepadButton(GamepadState.Handle, static_cast<SDL_GamepadButton>(ButtonIndex));
-            EKeyState& ButtonState = GamepadState.ButtonStates[ButtonIndex];
-
-            if (bIsButtonDown)
-            {
-                ButtonState = (ButtonState == EKeyState::Pressed || ButtonState == EKeyState::Held) ? EKeyState::Held : EKeyState::Pressed;
-            }
-            else
-            {
-                ButtonState = (ButtonState == EKeyState::Released || ButtonState == EKeyState::Unknown) ? EKeyState::Unknown : EKeyState::Released;
-            }
-        }
-
+        
         for (uint8 AxisIndex = 0; AxisIndex < CGamepadState::AxisCount; ++AxisIndex)
         {
             const int16 RawValue = SDL_GetGamepadAxis(GamepadState.Handle, static_cast<SDL_GamepadAxis>(AxisIndex));

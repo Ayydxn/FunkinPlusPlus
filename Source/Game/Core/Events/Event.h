@@ -11,7 +11,7 @@ enum class EEventType : uint8
 
     KeyPressed, KeyReleased, KeyTyped,
     MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled,
-    GamepadConnected, GamepadDisconnected,
+    GamepadButtonPressed, GamepadButtonReleased, GamepadConnected, GamepadDisconnected,
     WindowClose, WindowMinimize, WindowResize, WindowFocus, WindowLostFocus
 };
 

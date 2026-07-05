@@ -5,6 +5,32 @@
 
 #include <SDL3/SDL.h>
 
+namespace
+{
+    std::optional<EGamepadButton> SDLGamepadButtonToFunkinButton(const SDL_GamepadButton SDLGamepadButton)
+    {
+        switch (SDLGamepadButton)
+        {
+            case SDL_GAMEPAD_BUTTON_SOUTH:           return EGamepadButton::A;
+            case SDL_GAMEPAD_BUTTON_EAST:            return EGamepadButton::B;
+            case SDL_GAMEPAD_BUTTON_WEST:            return EGamepadButton::X;
+            case SDL_GAMEPAD_BUTTON_NORTH:           return EGamepadButton::Y;
+            case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:   return EGamepadButton::LeftBumper;
+            case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:  return EGamepadButton::RightBumper;
+            case SDL_GAMEPAD_BUTTON_BACK:            return EGamepadButton::Back;
+            case SDL_GAMEPAD_BUTTON_START:           return EGamepadButton::Start;
+            case SDL_GAMEPAD_BUTTON_GUIDE:           return EGamepadButton::Guide;
+            case SDL_GAMEPAD_BUTTON_LEFT_STICK:      return EGamepadButton::LeftThumbstick;
+            case SDL_GAMEPAD_BUTTON_RIGHT_STICK:     return EGamepadButton::RightThumbstick;
+            case SDL_GAMEPAD_BUTTON_DPAD_UP:         return EGamepadButton::DPadUp;
+            case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:      return EGamepadButton::DPadRight;
+            case SDL_GAMEPAD_BUTTON_DPAD_DOWN:       return EGamepadButton::DPadDown;
+            case SDL_GAMEPAD_BUTTON_DPAD_LEFT:       return EGamepadButton::DPadLeft;
+            default: return std::nullopt;
+        }
+    }
+}
+
 bool CApplication::Initialize(CEngineContext& EngineContext, const FWindowSpecification& WindowSpecification)
 {
     m_EngineContext = &EngineContext;
@@ -44,23 +70,8 @@ void CApplication::PumpMessages()
         const uint64 CaptureTimestampNs = SDL_GetTicksNS();
         const uint32 WindowID = Event.window.windowID;
         
-        if (Event.type == SDL_EVENT_GAMEPAD_ADDED)
-        {
-            CGamepadConnectedEvent GamepadConnectedEvent(Event.gdevice.which);
-            GamepadConnectedEvent.TimestampNs = CaptureTimestampNs;
-            
-            m_EngineContext->GetEventBroadcaster().Broadcast(GamepadConnectedEvent);
+        if (HandleGamepadEvent(Event, CaptureTimestampNs))
             continue;
-        }
-
-        if (Event.type == SDL_EVENT_GAMEPAD_REMOVED)
-        {
-            CGamepadDisconnectedEvent GamepadDisconnectedEvent(Event.gdevice.which);
-            GamepadDisconnectedEvent.TimestampNs = CaptureTimestampNs;
-            
-            m_EngineContext->GetEventBroadcaster().Broadcast(GamepadDisconnectedEvent);
-            continue;
-        }
         
         if (WindowID == m_MainWindow->GetNativeWindowID())
         {
@@ -98,4 +109,51 @@ void CApplication::DestroyWindow(const CWindow* Window)
 void CApplication::DestroyWindowByID(uint32 WindowID)
 {
     m_SecondaryWindows.erase(WindowID);
+}
+
+bool CApplication::HandleGamepadEvent(const SDL_Event& Event, uint64 CaptureTimestampNs) const
+{
+    if (Event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)
+    {
+        if (const std::optional<EGamepadButton> GamepadButton = SDLGamepadButtonToFunkinButton(static_cast<SDL_GamepadButton>(Event.gbutton.button)))
+        {
+            CGamepadButtonPressedEvent GamepadButtonPressedEvent(Event.gbutton.which, *GamepadButton, CaptureTimestampNs);
+            m_EngineContext->GetEventBroadcaster().Broadcast(GamepadButtonPressedEvent);
+        }
+
+        return true;
+    }
+
+    if (Event.type == SDL_EVENT_GAMEPAD_BUTTON_UP)
+    {
+        if (const std::optional<EGamepadButton> GamepadButton = SDLGamepadButtonToFunkinButton(static_cast<SDL_GamepadButton>(Event.gbutton.button)))
+        {
+            CGamepadButtonReleasedEvent GamepadButtonReleasedEvent(Event.gbutton.which, *GamepadButton, CaptureTimestampNs);
+            m_EngineContext->GetEventBroadcaster().Broadcast(GamepadButtonReleasedEvent);
+        }
+
+        return true;
+    }
+    
+    if (Event.type == SDL_EVENT_GAMEPAD_ADDED)
+    {
+        CGamepadConnectedEvent GamepadConnectedEvent(Event.gdevice.which);
+        GamepadConnectedEvent.TimestampNs = CaptureTimestampNs;
+            
+        m_EngineContext->GetEventBroadcaster().Broadcast(GamepadConnectedEvent);
+        
+        return true;
+    }
+
+    if (Event.type == SDL_EVENT_GAMEPAD_REMOVED)
+    {
+        CGamepadDisconnectedEvent GamepadDisconnectedEvent(Event.gdevice.which);
+        GamepadDisconnectedEvent.TimestampNs = CaptureTimestampNs;
+            
+        m_EngineContext->GetEventBroadcaster().Broadcast(GamepadDisconnectedEvent);
+        
+        return true;
+    }
+    
+    return false;
 }
