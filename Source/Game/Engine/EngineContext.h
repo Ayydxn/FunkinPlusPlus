@@ -4,6 +4,8 @@
 #include "Delegates/MulticastDelegate.h"
 #include "Events/EventBroadcaster.h"
 #include "Input/InputState.h"
+#include "Renderer/Renderer.h"
+#include "RHICore/RHIContext.h"
 
 class CEngineContext
 {
@@ -13,15 +15,20 @@ public:
     CEngineContext(const CEngineContext&) = delete;
     CEngineContext& operator=(const CEngineContext&) = delete;
     
-    void Initialize() { m_InputState.Initialize(m_EventBroadcaster); }
-    void Shutdown() { m_InputState.Shutdown(m_EventBroadcaster); }
+    bool Initialize(ERHIBackend RHIBackend, const FNativeWindowHandle& NativeWindowHandle);
+    void Shutdown();
 
+    IRHIContext& GetRHIContext() const { return *m_RHIContext; }
+    CRenderer& GetRenderer() const { return *m_Renderer; }
     CEventBroadcaster& GetEventBroadcaster() { return m_EventBroadcaster; }
     CInputState& GetInputState() { return m_InputState; }
     const FFrameStats& GetFrameStats() const { return m_FrameStats; }
 private:
     void SetFrameStats(const FFrameStats& FrameStats) { m_FrameStats = FrameStats; }
 private:
+    std::unique_ptr<IRHIContext> m_RHIContext;
+    std::unique_ptr<CRenderer> m_Renderer;
+    
     CEventBroadcaster m_EventBroadcaster;
     CInputState m_InputState;
     FFrameStats m_FrameStats;

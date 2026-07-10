@@ -20,6 +20,7 @@ private:
     FWindowSpecification BuildWindowSpecification() const;
     
     double ResolveDefaultRenderIntervalSeconds() const;
+    ERHIBackend ResolveRHIBackend() const;
 private:
     CEngineContext m_EngineContext;
     CApplication m_Application;

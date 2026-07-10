@@ -245,4 +245,8 @@ Register("tracy", {
     Links = { "tracy" }
 })
 
+Register("Vulkan", {
+    IncludePaths = { ThirdPartyFolder .. "Vulkan/Include" }
+})
+
 ListDependencies()

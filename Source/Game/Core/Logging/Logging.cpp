@@ -44,7 +44,7 @@ void CLogging::Initialize()
         LoggerSinks[1]->set_pattern("[%I:%M:%S.%e] %^[%l] (%n): %v%$");
     #endif
 
-    m_Logger = std::make_shared<spdlog::logger>("Funkin Engine", LoggerSinks.begin(), LoggerSinks.end());
+    m_Logger = std::make_shared<spdlog::logger>("Funkin++", LoggerSinks.begin(), LoggerSinks.end());
     m_Logger->set_level(spdlog::level::trace);
 
     bIsInitialized = true;

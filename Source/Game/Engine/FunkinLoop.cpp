@@ -18,14 +18,14 @@ bool CFunkinLoop::Initialize()
 {
     LOG_INFO_TAG("Core", "Starting Friday Night Funkin++...");
     
-    m_EngineContext.Initialize();
-    
     if (!m_Application.Initialize(m_EngineContext, BuildWindowSpecification()))
+        return false;
+    
+    if (!m_EngineContext.Initialize(ResolveRHIBackend(), m_Application.GetMainWindow().GetNativeHandle()))
         return false;
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
     
-    // TODO: (Ayydxn) Once a config file for game settings exists, prefer a user-set max FPS from it over the display refresh rate query below.
     m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
     
     FEngineDelegates::InitializeDelegate.Broadcast();
@@ -144,11 +144,22 @@ double CFunkinLoop::ResolveDefaultRenderIntervalSeconds() const
 {
     constexpr double FallbackFramerate = 240.0;
 
+    // TODO: (Ayydxn) Once a config file for game settings exists, prefer a user-set max FPS from it over the display refresh rate query below.
     const float RefreshRate = m_Application.GetMainWindow().GetDisplayRefreshRate();
     if (RefreshRate > 0.0f)
         return 1.0 / static_cast<double>(RefreshRate);
 
-    LOG_WARN_TAG("Core", "Failed to query display refresh rate, falling back to {} FPS cap.", FallbackFramerate);
+    LOG_WARN_TAG("Core", "Failed to query display refresh rate, falling back to {} FPS cap", FallbackFramerate);
     
     return 1.0 / FallbackFramerate;
+}
+
+ERHIBackend CFunkinLoop::ResolveRHIBackend() const
+{
+    // TODO: (Ayydxn) Once we have game settings, read the RHI backend from there. Since we only support Vulkan right now, we just always return that.
+    constexpr ERHIBackend SelectedRHIBackend = ERHIBackend::Vulkan;
+    
+    LOG_INFO_TAG("Renderer", "Selected RHI Backend: {}", GetRHIBackendName(SelectedRHIBackend));
+
+    return SelectedRHIBackend;
 }
