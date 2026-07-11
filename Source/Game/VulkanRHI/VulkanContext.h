@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "VulkanDevice.h"
 #include "VulkanIncludes.h"
 #include "Application/Window.h"
 #include "RHICore/RHIContext.h"
@@ -19,6 +20,8 @@ private:
     std::vector<const char*> GetRequiredInstanceExtensions();
 private:
     static bool bEnableValidationLayers;
+    
+    std::shared_ptr<CVulkanDevice> m_Device;
     
     vk::Instance m_Instance;
     vk::DebugUtilsMessengerEXT m_DebugUtilsMessenger;

@@ -1,6 +1,7 @@
 ﻿#include "FunkinPCH.h"
 #include "VulkanContext.h"
 #include "VulkanDebugUtils.h"
+#include "VulkanPlatformUtils.h"
 
 #include <SDL3/SDL_vulkan.h>
 
@@ -107,11 +108,25 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle)
     
     CreateDebugMessenger();
     
+    // (Ayydxn) A temporary surface that is used only during physical device selection so surface presentation support can be queried.
+    const vk::SurfaceKHR ProbeSurface = CVulkanPlatformUtils::CreateSurface(m_Instance, NativeWindowHandle);
+    if (!ProbeSurface)
+        return false;
+    
+    m_Device = std::make_shared<CVulkanDevice>(m_Instance, ProbeSurface);
+    
+    m_Instance.destroySurfaceKHR(ProbeSurface);
+    
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(m_Device->GetLogicalDevice());
+    
     return true;
 }
 
 void CVulkanContext::Destroy()
 {
+    m_Device->Destroy();
+    m_Device.reset();
+    
     if (bEnableValidationLayers)
         m_Instance.destroyDebugUtilsMessengerEXT(m_DebugUtilsMessenger);
     
