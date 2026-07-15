@@ -260,7 +260,7 @@ void CWindow::HandleNativeEvent(const SDL_Event& NativeEvent, uint64 CaptureTime
             m_WindowState.Width = static_cast<uint32>(NativeEvent.window.data1);
             m_WindowState.Height = static_cast<uint32>(NativeEvent.window.data2);
 
-            CWindowResizeEvent WindowResizeEvent(NativeEvent.window.data1, NativeEvent.window.data2);
+            CWindowResizeEvent WindowResizeEvent(NativeEvent.window.data1, NativeEvent.window.data2, NativeEvent.window.windowID);
             m_WindowState.EventCallbackFunction(WindowResizeEvent);
             
             break;

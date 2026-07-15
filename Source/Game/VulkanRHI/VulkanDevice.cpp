@@ -11,8 +11,7 @@ constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
 CVulkanDevice::CVulkanDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface)
 {
     /* -- Physical Device Selection -- */
-    m_PhysicalDevice = SelectPhysicalDevice(VulkanInstance, ProbeSurface);
-    verifyFunkinf(m_PhysicalDevice != VK_NULL_HANDLE, "Failed to select a Vulkan physical device! No suitable GPUs with Vulkan support were found!")
+    SelectPhysicalDevice(VulkanInstance, ProbeSurface);
     
     m_QueueFamilyIndices = FindQueueFamilies(m_PhysicalDevice, ProbeSurface);
     verifyFunkinf(m_QueueFamilyIndices.IsComplete(), "Failed to find a suitable graphics queue family on the selected Vulkan physical device!")
@@ -30,10 +29,13 @@ CVulkanDevice::CVulkanDevice(const vk::Instance& VulkanInstance, const vk::Surfa
     LOG_INFO_TAG("VulkanRHI", "   Vulkan API Version: {}", m_DeviceInfo.VulkanAPIVersion);
     
     /* -- Logical Device Creation -- */
-    m_LogicalDevice = CreateLogicalDevice(m_PhysicalDevice);
+    CreateLogicalDevice(m_PhysicalDevice);
 
     m_GraphicsQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.GraphicsFamily.value(), 0);
     m_PresentQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.PresentFamily.value(), 0);
+    
+    /* -- Other Resources -- */
+    CreateCommandPool();
 }
 
 void CVulkanDevice::Destroy() const
@@ -42,10 +44,77 @@ void CVulkanDevice::Destroy() const
     if (WaitIdleResult != vk::Result::eSuccess)
         LOG_ERROR_TAG("VulkanRHI", "Failed to wait for the Vulkan logical device to idle before shutdown! ({})", vk::to_string(WaitIdleResult));
     
+    m_LogicalDevice.destroyCommandPool(m_CommandPool);
     m_LogicalDevice.destroy();
 }
 
-vk::PhysicalDevice CVulkanDevice::SelectPhysicalDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface)
+void CVulkanDevice::RegisterWindow(uint32 WindowID, uint32 FramesInFlight)
+{
+    verifyFunkinf(!m_WindowCommandBuffers.contains(WindowID), "Attempted to register window ID {} with the Vulkan device, but it is already registered!", WindowID)
+    verifyFunkinf(FramesInFlight > 0, "Attempted to register window ID {} with 0 frames in flight!", WindowID)
+    
+    vk::CommandBufferAllocateInfo CommandBufferAllocateInfo = {};
+    CommandBufferAllocateInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+    CommandBufferAllocateInfo.commandPool = m_CommandPool;
+    CommandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
+    CommandBufferAllocateInfo.commandBufferCount = FramesInFlight;
+    
+    std::vector<vk::CommandBuffer> CommandBuffers;
+    const std::string Message = std::format("Failed to allocate Vulkan command buffers for window ID {}", WindowID);
+    VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), CommandBuffers, Message)
+    
+    m_WindowCommandBuffers.emplace(WindowID, std::move(CommandBuffers));
+}
+
+void CVulkanDevice::UnregisterWindow(uint32 WindowID)
+{
+    const auto WindowCommandBuffersIterator = m_WindowCommandBuffers.find(WindowID);
+    verifyFunkinf(WindowCommandBuffersIterator != m_WindowCommandBuffers.end(), "Attempted to unregister window ID {} with the Vulkan device, but it was never registered!", WindowID)
+    
+    m_LogicalDevice.freeCommandBuffers(m_CommandPool, WindowCommandBuffersIterator->second);
+    m_WindowCommandBuffers.erase(WindowCommandBuffersIterator);
+}
+
+vk::Result CVulkanDevice::Submit(const FSubmitInfo& SubmitInfo)
+{
+    vk::SubmitInfo VulkanSubmitInfo = {};
+    VulkanSubmitInfo.sType = vk::StructureType::eSubmitInfo;
+    VulkanSubmitInfo.waitSemaphoreCount = 1;
+    VulkanSubmitInfo.pWaitSemaphores = &SubmitInfo.WaitSemaphore;
+    VulkanSubmitInfo.pWaitDstStageMask = &SubmitInfo.WaitStage;
+    VulkanSubmitInfo.commandBufferCount = 1;
+    VulkanSubmitInfo.pCommandBuffers = &SubmitInfo.CommandBuffer;
+    VulkanSubmitInfo.signalSemaphoreCount = 1;
+    VulkanSubmitInfo.pSignalSemaphores = &SubmitInfo.SignalSemaphore;
+    
+    return m_GraphicsQueue.submit(1, &VulkanSubmitInfo, SubmitInfo.SignalFence);
+}
+
+vk::Result CVulkanDevice::Present(const FPresentInfo& PresentInfo)
+{
+    vk::PresentInfoKHR VulkanPresentInfo = {};
+    VulkanPresentInfo.sType = vk::StructureType::ePresentInfoKHR;
+    VulkanPresentInfo.waitSemaphoreCount = 1;
+    VulkanPresentInfo.pWaitSemaphores = &PresentInfo.WaitSemaphore;
+    VulkanPresentInfo.swapchainCount = 1;
+    VulkanPresentInfo.pSwapchains = &PresentInfo.SwapChain;
+    VulkanPresentInfo.pImageIndices = &PresentInfo.ImageIndex;
+    
+    return m_PresentQueue.presentKHR(VulkanPresentInfo);
+}
+
+vk::CommandBuffer CVulkanDevice::GetCommandBuffer(uint32 WindowID, uint32 FrameIndex) const
+{
+    const auto WindowCommandBuffersIterator = m_WindowCommandBuffers.find(WindowID);
+    verifyFunkinf(WindowCommandBuffersIterator != m_WindowCommandBuffers.end(), "Attempted to get a command buffer for window ID {}, but it is not registered!", WindowID)
+    
+    const std::vector<vk::CommandBuffer>& CommandBuffers = WindowCommandBuffersIterator->second;
+    verifyFunkinf(FrameIndex < CommandBuffers.size(), "Frame index {} is out of range for window ID {} (which has {} frames in flight)!", FrameIndex, WindowID, CommandBuffers.size())
+    
+    return CommandBuffers[FrameIndex];
+}
+
+void CVulkanDevice::SelectPhysicalDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface)
 {
     const auto DeviceEnumerationResult = VulkanInstance.enumeratePhysicalDevices();
     verifyFunkinf(DeviceEnumerationResult.result == vk::Result::eSuccess, "Failed to enumerate Vulkan physical devices! ({})", vk::to_string(DeviceEnumerationResult.result))
@@ -53,16 +122,33 @@ vk::PhysicalDevice CVulkanDevice::SelectPhysicalDevice(const vk::Instance& Vulka
     const auto AvailablePhysicalDevices = DeviceEnumerationResult.value;
     verifyFunkinf(!AvailablePhysicalDevices.empty(), "Failed to select a Vulkan physical device! No GPUs with Vulkan support were found!")
     
+    uint32 SuitablePhysicalDeviceCount = 0;
+    uint32 BestPhysicalDeviceScore = 0;
+    
     for (const auto PhysicalDevice : AvailablePhysicalDevices)
     {
-        if (IsPhysicalDeviceSuitable(PhysicalDevice, ProbeSurface))
-            return PhysicalDevice;
+        if (!IsPhysicalDeviceSuitable(PhysicalDevice, ProbeSurface))
+            continue;
+        
+        SuitablePhysicalDeviceCount++;
+        
+        const uint32 PhysicalDeviceScore = RatePhysicalDevice(PhysicalDevice);
+        if (PhysicalDeviceScore > BestPhysicalDeviceScore)
+        {
+            m_PhysicalDevice = PhysicalDevice;
+            BestPhysicalDeviceScore = PhysicalDeviceScore;
+        }
     }
     
-    return VK_NULL_HANDLE;
+    verifyFunkinf(m_PhysicalDevice != VK_NULL_HANDLE, "Failed to select a Vulkan physical device! No suitable GPUs with Vulkan support were found!")
+    
+    const auto PhysicalDeviceProperties = m_PhysicalDevice.getProperties();
+    
+    LOG_INFO_TAG("VulkanRHI", "Selected physical device '{}' ({}) as the best candidate out of {} suitable device(s).", PhysicalDeviceProperties.deviceName.data(),
+        vk::to_string(PhysicalDeviceProperties.deviceType), SuitablePhysicalDeviceCount);
 }
 
-vk::Device CVulkanDevice::CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice)
+void CVulkanDevice::CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice)
 {
     constexpr float QueuePriority = 1.0f;
     const std::set<uint32> UniqueQueueFamilies = { m_QueueFamilyIndices.GraphicsFamily.value(), m_QueueFamilyIndices.PresentFamily.value() };
@@ -95,10 +181,17 @@ vk::Device CVulkanDevice::CreateLogicalDevice(const vk::PhysicalDevice& Physical
     DeviceCreateInfo.pNext = &PhysicalDeviceVulkan13Features;
     DeviceCreateInfo.flags = vk::DeviceCreateFlags();
     
-    vk::Device LogicalDevice;
-    VK_CHECK_RESULT(PhysicalDevice.createDevice(DeviceCreateInfo), LogicalDevice, "Failed to create Vulkan logical device!")
+    VK_CHECK_RESULT(PhysicalDevice.createDevice(DeviceCreateInfo), m_LogicalDevice, "Failed to create Vulkan logical device!")
+}
+
+void CVulkanDevice::CreateCommandPool()
+{
+    vk::CommandPoolCreateInfo CommandPoolCreateInfo = {};
+    CommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
+    CommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilyIndices.GraphicsFamily.value();
+    CommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
     
-    return LogicalDevice;
+    VK_CHECK_RESULT(m_LogicalDevice.createCommandPool(CommandPoolCreateInfo), m_CommandPool, "Failed to create Vulkan command pool!")
 }
 
 bool CVulkanDevice::IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface)
@@ -127,6 +220,21 @@ bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(const vk::Physic
         RequiredExtensions.erase(AvailablePhysicalDeviceExtension.extensionName.data());
 
     return RequiredExtensions.empty();
+}
+
+uint32 CVulkanDevice::RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice)
+{
+    const vk::PhysicalDeviceProperties PhysicalDeviceProperties = PhysicalDevice.getProperties();
+    uint32 Score = 0;
+    
+    switch (PhysicalDeviceProperties.deviceType)
+    {
+        case vk::PhysicalDeviceType::eDiscreteGpu: Score += 100; break;
+        case vk::PhysicalDeviceType::eIntegratedGpu: Score += 10; break;
+        default: break;
+    }
+    
+    return Score;
 }
 
 FQueueFamilyIndices CVulkanDevice::FindQueueFamilies(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface)
@@ -160,7 +268,7 @@ std::string CVulkanDevice::GetVendorNameFromID(uint32 VendorID)
         case 0x10DE: return "NVIDIA Corporation";
         case 0x13B5: return "ARM";
         case 0x5143: return "Qualcomm";
-        case 0x8080: return "Intel Corporation";
+        case 0x8086: return "Intel Corporation";
         default: return "Unknown GPU Vendor";
     }
 }

@@ -44,11 +44,12 @@ private:
 class CWindowResizeEvent final : public IEvent
 {
 public:
-    CWindowResizeEvent(uint32 InWidth, uint32 InHeight)
-        : m_Width(InWidth), m_Height(InHeight) {}
+    CWindowResizeEvent(uint32 InWidth, uint32 InHeight, uint32 SourceWindowID)
+        : m_Width(InWidth), m_Height(InHeight), m_SourceWindowID(SourceWindowID) {}
 
-    uint32 GetWidth()  const { return m_Width; }
+    uint32 GetWidth() const { return m_Width; }
     uint32 GetHeight() const { return m_Height; }
+    uint32 GetSourceWindowID() const { return m_SourceWindowID; }
 
     std::string ToString() const override
     {
@@ -63,6 +64,7 @@ public:
 private:
     uint32 m_Width  = 0;
     uint32 m_Height = 0;
+    uint32 m_SourceWindowID = 0;
 };
 
 class CWindowFocusEvent final : public IEvent
