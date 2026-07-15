@@ -44,11 +44,12 @@ public:
     void RegisterWindow(uint32 WindowID, uint32 FramesInFlight);
     void UnregisterWindow(uint32 WindowID);
     
-    vk::Result Submit(const FSubmitInfo& SubmitInfo);
-    vk::Result Present(const FPresentInfo& PresentInfo);
+    vk::Result Submit(const FSubmitInfo& SubmitInfo) const;
+    vk::Result Present(const FPresentInfo& PresentInfo) const;
     
     const vk::PhysicalDevice& GetPhysicalDevice() const { return m_PhysicalDevice; }
     const vk::Device& GetLogicalDevice() const { return m_LogicalDevice; }
+    const FQueueFamilyIndices GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
     const vk::Queue& GetGraphicsQueue() const { return m_GraphicsQueue; }
     const vk::Queue& GetPresentQueue() const { return m_PresentQueue; }
     const FVulkanDeviceInfo& GetDeviceInfo() const { return m_DeviceInfo; }
@@ -60,7 +61,7 @@ private:
     
     bool IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);
     bool DoesPhysicalDeviceSupportRequiredExtensions(const vk::PhysicalDevice& PhysicalDevice);
-    uint32 CVulkanDevice::RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice);
+    uint32 RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice);
     
     FQueueFamilyIndices FindQueueFamilies(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);
     

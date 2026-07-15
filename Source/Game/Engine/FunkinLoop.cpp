@@ -21,7 +21,12 @@ bool CFunkinLoop::Initialize()
     if (!m_Application.Initialize(m_EngineContext, BuildWindowSpecification()))
         return false;
     
-    if (!m_EngineContext.Initialize(ResolveRHIBackend(), m_Application.GetMainWindow().GetNativeHandle()))
+    const uint32 MainWindowID = m_Application.GetMainWindow().GetNativeWindowID();
+    const auto MainWindowWidth = m_Application.GetMainWindow().GetWidth();
+    const auto MainWindowHeight = m_Application.GetMainWindow().GetHeight();
+    const bool bWasVSyncRequested = m_Application.GetMainWindow().WantsVSync();
+    
+    if (!m_EngineContext.Initialize(ResolveRHIBackend(), MainWindowID, m_Application.GetMainWindow().GetNativeHandle(), MainWindowWidth, MainWindowHeight, bWasVSyncRequested))
         return false;
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
@@ -87,6 +92,13 @@ void CFunkinLoop::Shutdown()
 void CFunkinLoop::OnEvent(IEvent& Event)
 {
     CEventDispatcher Dispatcher(Event);
+    Dispatcher.Dispatch<CWindowResizeEvent>([this](const CWindowResizeEvent& WindowResizeEvent)
+    {
+        m_EngineContext.GetRHIContext().OnWindowResized(WindowResizeEvent.GetSourceWindowID(), WindowResizeEvent.GetWidth(), WindowResizeEvent.GetHeight());
+        
+        return true;
+    });
+    
     Dispatcher.Dispatch<CWindowCloseEvent>([this](const CWindowCloseEvent& WindowCloseEvent)
     {
         if (WindowCloseEvent.GetSourceWindowID() == m_Application.GetMainWindow().GetNativeWindowID())

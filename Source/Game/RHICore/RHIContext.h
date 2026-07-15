@@ -21,8 +21,10 @@ public:
     IRHIContext(const IRHIContext&) = delete;
     IRHIContext& operator=(const IRHIContext&) = delete;
     
-    virtual bool Initialize(const FNativeWindowHandle& NativeWindowHandle) = 0;
+    virtual bool Initialize(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) = 0;
     virtual void Destroy() = 0;
+    
+    virtual void OnWindowResized(uint32 WindowID, uint32 NewWidth, uint32 NewHeight) = 0;
 protected:
     IRHIContext() = default;
 };

@@ -1,12 +1,13 @@
 ﻿#include "FunkinPCH.h"
 #include "EngineContext.h"
 
-bool CEngineContext::Initialize(ERHIBackend RHIBackend, const FNativeWindowHandle& NativeWindowHandle)
+bool CEngineContext::Initialize(ERHIBackend RHIBackend, uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight,
+        bool bRequestVSync)
 {
     m_InputState.Initialize(m_EventBroadcaster);
     
     m_RHIContext = CreateRHIContext(RHIBackend);
-    if (!m_RHIContext->Initialize(NativeWindowHandle))
+    if (!m_RHIContext->Initialize(WindowID, NativeWindowHandle, InitialWindowWidth, InitialWindowHeight, bRequestVSync))
         return false;
     
     m_Renderer = std::make_unique<CRenderer>(*m_RHIContext);

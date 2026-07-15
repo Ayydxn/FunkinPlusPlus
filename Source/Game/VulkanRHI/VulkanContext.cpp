@@ -16,47 +16,45 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugMessengerCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, vk::DebugUtilsMessageTypeFlagsEXT MessageType,
     vk::DebugUtilsMessengerCallbackDataEXT const* CallbackData, void*)
 {
-    switch (MessageSeverity)
+    // (Ayydxn) Overlays (like RivaTuner Statistics Server) inject VK_IMAGE_USAGE_STORAGE_BIT, triggering a false positive for this VUID.
+    // Silencing this specific ID prevents masking other genuine swapchain configuration errors.
+    if (CallbackData && CallbackData->pMessageIdName)
     {
-        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose: break;
-        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo: break;
-            
-        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
+        constexpr std::array<std::string_view, 2> SuppressedMessageIDs
         {
-            if (MessageType == vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
-            {
-                LOG_WARN_TAG("Vulkan Validation - Performance", CallbackData->pMessage);
-                break;
-            }
-            
-            if (MessageType == vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation)
-            {
-                LOG_WARN_TAG("Vulkan Validation - Validation", CallbackData->pMessage);
-                break;
-            }
-        }
+            "VUID-VkSwapchainCreateInfoKHR-imageFormat-01778",
+            "VUID-VkImageViewCreateInfo-usage-02275"
+        };
+        
+        if (std::ranges::find(SuppressedMessageIDs, CallbackData->pMessageIdName) != SuppressedMessageIDs.end())
+            return vk::False;
+    }
 
-        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-        {
-            if (MessageType == vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
-            {
-                LOG_ERROR_TAG("Vulkan Validation - Performance", CallbackData->pMessage);
-                break;
-            }
-            
-            if (MessageType == vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation)
-            {
-                LOG_ERROR_TAG("Vulkan Validation - Validation", CallbackData->pMessage);
-                break;
-            }
-        }
+    // Setup the message tag
+    auto Tag = "Vulkan Validation";
+    if (MessageType & vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
+    {
+        Tag = "Vulkan Validation - Performance";
+    }
+    else if (MessageType & vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation)
+    {
+        Tag = "Vulkan Validation - Validation";
+    }
+
+    // Route message based on severity
+    if (MessageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+    {
+        LOG_ERROR_TAG(Tag, CallbackData->pMessage);
+    }
+    else if (MessageSeverity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+    {
+        LOG_WARN_TAG(Tag, CallbackData->pMessage);
     }
     
     return vk::False;
 }
 
-// NOTE: (Ayydxn) NativeWindowHandle is currently unused, but we'll need this it comes time for surface creation. Might as well as have it from now.
-bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle)
+bool CVulkanContext::Initialize(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync)
 {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
     
@@ -119,11 +117,17 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle)
     
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_Device->GetLogicalDevice());
     
+    const vk::Extent2D InitialSize = { InitialWindowWidth, InitialWindowHeight };
+    m_MainWindowSwapChain = std::make_unique<CVulkanSwapChain>(m_Device, m_Instance, WindowID, NativeWindowHandle, InitialSize, 2, bRequestVSync);
+    
     return true;
 }
 
 void CVulkanContext::Destroy()
 {
+    m_MainWindowSwapChain->Destroy(m_Instance);
+    m_MainWindowSwapChain.reset();
+    
     m_Device->Destroy();
     m_Device.reset();
     
@@ -131,6 +135,18 @@ void CVulkanContext::Destroy()
         m_Instance.destroyDebugUtilsMessengerEXT(m_DebugUtilsMessenger);
     
     m_Instance.destroy();
+}
+
+void CVulkanContext::OnWindowResized(uint32 WindowID, uint32 NewWidth, uint32 NewHeight)
+{
+    if (!m_MainWindowSwapChain)
+        return;
+    
+    // TODO: (Ayydxn) Transform into a WindowID -> CVulkanSwapChain lookup once secondary windows (like one for the chart editor) are fully supported.
+    if (WindowID != m_MainWindowSwapChain->GetWindowID())
+        return;
+    
+    m_MainWindowSwapChain->Resize(NewWidth, NewHeight);
 }
 
 void CVulkanContext::CreateDebugMessenger()

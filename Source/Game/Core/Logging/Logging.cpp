@@ -45,7 +45,12 @@ void CLogging::Initialize()
     #endif
 
     m_Logger = std::make_shared<spdlog::logger>("Funkin++", LoggerSinks.begin(), LoggerSinks.end());
-    m_Logger->set_level(spdlog::level::trace);
+    
+    #ifndef FUNKIN_BUILD_DISTRIBUTION
+        m_Logger->set_level(spdlog::level::trace);
+    #else
+        m_Logger->set_level(spdlog::level::info);
+    #endif
 
     bIsInitialized = true;
 }

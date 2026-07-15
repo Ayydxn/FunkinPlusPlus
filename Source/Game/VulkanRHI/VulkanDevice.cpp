@@ -60,8 +60,7 @@ void CVulkanDevice::RegisterWindow(uint32 WindowID, uint32 FramesInFlight)
     CommandBufferAllocateInfo.commandBufferCount = FramesInFlight;
     
     std::vector<vk::CommandBuffer> CommandBuffers;
-    const std::string Message = std::format("Failed to allocate Vulkan command buffers for window ID {}", WindowID);
-    VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), CommandBuffers, Message)
+    VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), CommandBuffers, "Failed to allocate Vulkan command buffers for window ID {}", WindowID)
     
     m_WindowCommandBuffers.emplace(WindowID, std::move(CommandBuffers));
 }
@@ -75,7 +74,7 @@ void CVulkanDevice::UnregisterWindow(uint32 WindowID)
     m_WindowCommandBuffers.erase(WindowCommandBuffersIterator);
 }
 
-vk::Result CVulkanDevice::Submit(const FSubmitInfo& SubmitInfo)
+vk::Result CVulkanDevice::Submit(const FSubmitInfo& SubmitInfo) const
 {
     vk::SubmitInfo VulkanSubmitInfo = {};
     VulkanSubmitInfo.sType = vk::StructureType::eSubmitInfo;
@@ -90,7 +89,7 @@ vk::Result CVulkanDevice::Submit(const FSubmitInfo& SubmitInfo)
     return m_GraphicsQueue.submit(1, &VulkanSubmitInfo, SubmitInfo.SignalFence);
 }
 
-vk::Result CVulkanDevice::Present(const FPresentInfo& PresentInfo)
+vk::Result CVulkanDevice::Present(const FPresentInfo& PresentInfo) const
 {
     vk::PresentInfoKHR VulkanPresentInfo = {};
     VulkanPresentInfo.sType = vk::StructureType::ePresentInfoKHR;
