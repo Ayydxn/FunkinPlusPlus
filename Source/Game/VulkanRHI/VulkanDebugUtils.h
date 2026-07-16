@@ -14,6 +14,16 @@
         } \
     } while (false);
 
+#define VK_CHECK_RESULT_VOID(Expression, Message, ...) \
+    do { \
+        auto ExpressionResult = (Expression); \
+        if (ExpressionResult != vk::Result::eSuccess) \
+        { \
+            LOG_ERROR_TAG("VulkanRHI", "{} ({})", fmt::format(fmt::runtime(Message), ##__VA_ARGS__), vk::to_string(ExpressionResult)); \
+            verifyFunkinf(false, "A Vulkan operation failed: {} ({})", fmt::format(fmt::runtime(Message), ##__VA_ARGS__), vk::to_string(ExpressionResult)); \
+        } \
+    } while (false);
+
 class CVulkanDebugUtils
 {
 public:

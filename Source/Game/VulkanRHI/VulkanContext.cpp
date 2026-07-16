@@ -125,6 +125,8 @@ bool CVulkanContext::Initialize(uint32 WindowID, const FNativeWindowHandle& Nati
 
 void CVulkanContext::Destroy()
 {
+    m_Device->WaitIdle();
+    
     m_MainWindowSwapChain->Destroy(m_Instance);
     m_MainWindowSwapChain.reset();
     

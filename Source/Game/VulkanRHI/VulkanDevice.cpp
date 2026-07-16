@@ -40,9 +40,7 @@ CVulkanDevice::CVulkanDevice(const vk::Instance& VulkanInstance, const vk::Surfa
 
 void CVulkanDevice::Destroy() const
 {
-    const vk::Result WaitIdleResult = m_LogicalDevice.waitIdle();
-    if (WaitIdleResult != vk::Result::eSuccess)
-        LOG_ERROR_TAG("VulkanRHI", "Failed to wait for the Vulkan logical device to idle before shutdown! ({})", vk::to_string(WaitIdleResult));
+    WaitIdle();
     
     m_LogicalDevice.destroyCommandPool(m_CommandPool);
     m_LogicalDevice.destroy();
@@ -72,6 +70,13 @@ void CVulkanDevice::UnregisterWindow(uint32 WindowID)
     
     m_LogicalDevice.freeCommandBuffers(m_CommandPool, WindowCommandBuffersIterator->second);
     m_WindowCommandBuffers.erase(WindowCommandBuffersIterator);
+}
+
+void CVulkanDevice::WaitIdle() const
+{
+    const vk::Result WaitIdleResult = m_LogicalDevice.waitIdle();
+    if (WaitIdleResult != vk::Result::eSuccess)
+        LOG_ERROR_TAG("VulkanRHI", "Failed to wait for the Vulkan logical device to idle! ({})", vk::to_string(WaitIdleResult));
 }
 
 vk::Result CVulkanDevice::Submit(const FSubmitInfo& SubmitInfo) const

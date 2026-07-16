@@ -16,6 +16,9 @@ public:
     void Destroy() override;
     
     void OnWindowResized(uint32 WindowID, uint32 NewWidth, uint32 NewHeight) override;
+    
+    CVulkanDevice& GetDevice() const { return *m_Device; }
+    CVulkanSwapChain& GetMainWindowSwapChain() const { return *m_MainWindowSwapChain; }
 private:
     void CreateDebugMessenger();
     void PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateInfoEXT& DebugMessengerCreateInfo);

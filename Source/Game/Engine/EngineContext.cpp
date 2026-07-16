@@ -10,13 +10,18 @@ bool CEngineContext::Initialize(ERHIBackend RHIBackend, uint32 WindowID, const F
     if (!m_RHIContext->Initialize(WindowID, NativeWindowHandle, InitialWindowWidth, InitialWindowHeight, bRequestVSync))
         return false;
     
-    m_Renderer = std::make_unique<CRenderer>(*m_RHIContext);
+    m_DynamicRHI = CreateDynamicRHI(RHIBackend, *m_RHIContext);
+    
+    m_Renderer = std::make_unique<CRenderer>(*m_DynamicRHI);
     
     return true;
 }
 
 void CEngineContext::Shutdown()
 {
+    m_Renderer.reset();
+    m_DynamicRHI.reset();
+    
     m_RHIContext->Destroy();
     m_RHIContext.reset();
     

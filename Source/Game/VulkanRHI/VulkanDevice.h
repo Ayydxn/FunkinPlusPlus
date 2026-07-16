@@ -44,6 +44,7 @@ public:
     void RegisterWindow(uint32 WindowID, uint32 FramesInFlight);
     void UnregisterWindow(uint32 WindowID);
     
+    void WaitIdle() const;
     vk::Result Submit(const FSubmitInfo& SubmitInfo) const;
     vk::Result Present(const FPresentInfo& PresentInfo) const;
     

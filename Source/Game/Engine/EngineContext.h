@@ -5,6 +5,7 @@
 #include "Events/EventBroadcaster.h"
 #include "Input/InputState.h"
 #include "Renderer/Renderer.h"
+#include "RHICore/DynamicRHI.h"
 #include "RHICore/RHIContext.h"
 
 class CEngineContext
@@ -28,6 +29,7 @@ private:
     void SetFrameStats(const FFrameStats& FrameStats) { m_FrameStats = FrameStats; }
 private:
     std::unique_ptr<IRHIContext> m_RHIContext;
+    std::unique_ptr<IDynamicRHI> m_DynamicRHI;
     std::unique_ptr<CRenderer> m_Renderer;
     
     CEventBroadcaster m_EventBroadcaster;

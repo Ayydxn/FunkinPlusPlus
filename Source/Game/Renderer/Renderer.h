@@ -1,14 +1,18 @@
 ﻿#pragma once
-#include "RHICore/RHIContext.h"
+
+#include "RHICore/DynamicRHI.h"
 
 class CRenderer
 {
 public:
-    explicit CRenderer(IRHIContext& RHIContext)
-        : m_RHIContext(RHIContext) {}
+    explicit CRenderer(IDynamicRHI& DynamicRHI)
+        : m_DynamicRHI(DynamicRHI) {}
     
     CRenderer(const CRenderer&) = delete;
     CRenderer& operator=(const CRenderer&) = delete;
+    
+    void BeginFrame() const;
+    void EndFrame() const;
 private:
-    IRHIContext& m_RHIContext;
+    IDynamicRHI& m_DynamicRHI;
 };

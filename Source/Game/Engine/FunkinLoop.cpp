@@ -5,6 +5,7 @@
 #include "Logging/Logging.h"
 #include "Misc/CommandLine.h"
 
+
 bool CFunkinLoop::PreInitialize()
 {
     CLogging::Initialize();
@@ -65,9 +66,14 @@ void CFunkinLoop::Tick()
         {
             FUNKIN_PROFILE_SCOPE("Render")
             
+            m_EngineContext.GetRenderer().BeginFrame();
+            
+            // TODO: (Ayydxn) Actual draw calls and render commands go here once exposed by the renderer's public API.
+            
+            m_EngineContext.GetRenderer().EndFrame();
+            
             m_FramePacer.OnRenderExecuted();
             
-            // TODO: (Ayydxn) Once we actually have "rendering" and "presenting", move this call there.
             FUNKIN_PROFILE_MARK_FRAME;
         }
         

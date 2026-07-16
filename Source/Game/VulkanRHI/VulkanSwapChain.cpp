@@ -40,6 +40,12 @@ void CVulkanSwapChain::Resize(uint32 NewWidth, uint32 NewHeight)
         return;
     }
     
+    const vk::Device& LogicalDevice = m_VulkanDevice->GetLogicalDevice();
+    
+    const vk::Result WaitIdleResult = LogicalDevice.waitIdle();
+    verifyFunkinf(WaitIdleResult == vk::Result::eSuccess, "Failed to wait for the Vulkan logical device to idle before resizing the swapchain for window ID {}! ({})",
+        m_WindowID, vk::to_string(WaitIdleResult))
+    
     // Capture the current swapchain and its dependents locally before CreateSwapChainAndDependents() overwrites them with the resources of the new swapchain.
     // This is required for the correct oldSwapchain hand-off pattern: the old swapchain must still be alive when the new one is created,
     // and its own dependents can only be destroyed afterward.
@@ -51,8 +57,6 @@ void CVulkanSwapChain::Resize(uint32 NewWidth, uint32 NewHeight)
     CreateSwapChainAndDependents(NewExtent, OldSwapChain);
     
     // Only now, with the new swapchain fully created, is it safe to destroy the resources of the previous swapchain.
-    const vk::Device& LogicalDevice = m_VulkanDevice->GetLogicalDevice();
-    
     for (const vk::Semaphore& OldRenderFinishedSemaphore : OldRenderFinishedSemaphores)
         LogicalDevice.destroySemaphore(OldRenderFinishedSemaphore);
     
@@ -61,6 +65,43 @@ void CVulkanSwapChain::Resize(uint32 NewWidth, uint32 NewHeight)
     
     if (OldSwapChain)
         LogicalDevice.destroySwapchainKHR(OldSwapChain);
+}
+
+FAcquiredFrame CVulkanSwapChain::AcquireNextImage()
+{
+    const vk::Device& LogicalDevice = m_VulkanDevice->GetLogicalDevice();
+    const auto& [ImageAvailableSemaphore, InFlightFence] = m_FrameSyncObjects[m_CurrentFrameIndex];
+    
+    const vk::Result WaitForFencesResult = LogicalDevice.waitForFences(1, &InFlightFence, vk::True, std::numeric_limits<uint64>::max());
+    verifyFunkinf(WaitForFencesResult == vk::Result::eSuccess, "Failed to wait for the in-flight fence for window ID {}! ({})", m_WindowID, vk::to_string(WaitForFencesResult))
+    
+    uint32 AcquiredImageIndex = 0;
+    const vk::Result AcquireResult = LogicalDevice.acquireNextImageKHR(m_SwapChain, std::numeric_limits<uint64>::max(), ImageAvailableSemaphore,VK_NULL_HANDLE,
+        &AcquiredImageIndex);
+    
+    // (Ayydxn) We can recover from eErrorOutOfDateKHR/eSuboptimalKHR, so it's up to the caller to handle that. Typically, it'll just be by calling Resize(). 
+    if (AcquireResult != vk::Result::eSuccess && AcquireResult != vk::Result::eSuboptimalKHR)
+    {
+        return {
+            .ImageIndex = 0,
+            .FrameIndex = m_CurrentFrameIndex,
+            .AcquisitionResult = AcquireResult
+        };
+    }
+    
+    const vk::Result ResetFencesResult = LogicalDevice.resetFences(1, &InFlightFence);
+    verifyFunkinf(ResetFencesResult == vk::Result::eSuccess, "Failed to reset the in-flight fence for window ID {}! ({})", m_WindowID, vk::to_string(ResetFencesResult))
+    
+    return {
+        .ImageIndex = AcquiredImageIndex,
+        .FrameIndex = m_CurrentFrameIndex,
+        .AcquisitionResult = AcquireResult
+    };
+}
+
+void CVulkanSwapChain::AdvanceFrame()
+{
+    m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % m_FramesInFlight;
 }
 
 void CVulkanSwapChain::CreateSwapChainAndDependents(const vk::Extent2D& RequestedSize, const vk::SwapchainKHR& OldSwapchain)
