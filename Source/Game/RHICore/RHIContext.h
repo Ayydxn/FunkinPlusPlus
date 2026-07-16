@@ -24,6 +24,9 @@ public:
     virtual bool Initialize(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) = 0;
     virtual void Destroy() = 0;
     
+    virtual bool RegisterWindow(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWidth, uint32 InitialHeight, bool bRequestVSync) = 0;
+    virtual void UnregisterWindow(uint32 WindowID) = 0;
+    
     virtual void OnWindowResized(uint32 WindowID, uint32 NewWidth, uint32 NewHeight) = 0;
 protected:
     IRHIContext() = default;

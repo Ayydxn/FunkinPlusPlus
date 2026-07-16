@@ -12,6 +12,7 @@ public:
     void BeginFrame() override;
     void EndFrame() override;
 private:
+    std::unordered_map<uint32, FAcquiredFrame> m_AcquiredFramesThisFrame;
+    
     CVulkanContext& m_VulkanContext;
-    std::optional<FAcquiredFrame> m_CurrentAcquiredFrame;
 };

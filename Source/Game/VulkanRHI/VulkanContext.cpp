@@ -5,6 +5,8 @@
 
 #include <SDL3/SDL_vulkan.h>
 
+#include <ranges>
+
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #ifndef FUNKIN_BUILD_DISTRIBUTION
@@ -117,18 +119,19 @@ bool CVulkanContext::Initialize(uint32 WindowID, const FNativeWindowHandle& Nati
     
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_Device->GetLogicalDevice());
     
-    const vk::Extent2D InitialSize = { InitialWindowWidth, InitialWindowHeight };
-    m_MainWindowSwapChain = std::make_unique<CVulkanSwapChain>(m_Device, m_Instance, WindowID, NativeWindowHandle, InitialSize, 2, bRequestVSync);
+    m_MainWindowID = WindowID;
     
-    return true;
+    return RegisterWindow(WindowID, NativeWindowHandle, InitialWindowWidth, InitialWindowHeight, bRequestVSync);
 }
 
 void CVulkanContext::Destroy()
 {
     m_Device->WaitIdle();
     
-    m_MainWindowSwapChain->Destroy(m_Instance);
-    m_MainWindowSwapChain.reset();
+    for (auto& SwapChain : m_WindowSwapChains | std::views::values)
+        SwapChain->Destroy(m_Instance);
+    
+    m_WindowSwapChains.clear();
     
     m_Device->Destroy();
     m_Device.reset();
@@ -139,16 +142,62 @@ void CVulkanContext::Destroy()
     m_Instance.destroy();
 }
 
+bool CVulkanContext::RegisterWindow(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWidth, uint32 InitialHeight, bool bRequestVSync)
+{
+    verifyFunkinf(!m_WindowSwapChains.contains(WindowID), "Attempted to register window ID {} with the Vulkan context, but it is already registered!", WindowID)
+    
+    const vk::Extent2D InitialExtent(InitialWidth, InitialHeight);
+    auto SwapChain = std::make_unique<CVulkanSwapChain>(m_Device, m_Instance, WindowID, NativeWindowHandle, InitialExtent, DefaultFramesInFlight, bRequestVSync);
+    
+    m_WindowSwapChains.emplace(WindowID, std::move(SwapChain));
+    
+    return true;
+}
+
+void CVulkanContext::UnregisterWindow(uint32 WindowID)
+{
+    const auto Iterator = m_WindowSwapChains.find(WindowID);
+    if (Iterator == m_WindowSwapChains.end())
+        return;
+    
+    // GPU may still be executing work that references this window's swapchain and its sync resources. So, we need to wait for it.
+    m_Device->WaitIdle();
+    
+    Iterator->second->Destroy(m_Instance);
+    m_WindowSwapChains.erase(Iterator);
+}
+
 void CVulkanContext::OnWindowResized(uint32 WindowID, uint32 NewWidth, uint32 NewHeight)
 {
-    if (!m_MainWindowSwapChain)
+    CVulkanSwapChain* SwapChain = GetSwapChain(WindowID);
+    if (!SwapChain)
         return;
     
-    // TODO: (Ayydxn) Transform into a WindowID -> CVulkanSwapChain lookup once secondary windows (like one for the chart editor) are fully supported.
-    if (WindowID != m_MainWindowSwapChain->GetWindowID())
-        return;
+    SwapChain->Resize(NewWidth, NewHeight);
+}
+
+CVulkanSwapChain* CVulkanContext::GetSwapChain(uint32 WindowID) const
+{
+    const auto Iterator = m_WindowSwapChains.find(WindowID);
     
-    m_MainWindowSwapChain->Resize(NewWidth, NewHeight);
+    return Iterator != m_WindowSwapChains.end() ? Iterator->second.get() : nullptr;
+}
+
+std::vector<uint32> CVulkanContext::GetOrderedWindowIDs() const
+{
+    std::vector<uint32> OrderedWindowIDs;
+    OrderedWindowIDs.reserve(m_WindowSwapChains.size());
+    
+    if (m_WindowSwapChains.contains(m_MainWindowID))
+        OrderedWindowIDs.push_back(m_MainWindowID);
+    
+    for (const auto& WindowID : m_WindowSwapChains | std::views::keys)
+    {
+        if (WindowID != m_MainWindowID)
+            OrderedWindowIDs.push_back(WindowID);
+    }
+    
+    return OrderedWindowIDs;
 }
 
 void CVulkanContext::CreateDebugMessenger()

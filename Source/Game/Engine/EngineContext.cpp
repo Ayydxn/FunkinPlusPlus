@@ -27,3 +27,13 @@ void CEngineContext::Shutdown()
     
     m_InputState.Shutdown(m_EventBroadcaster);
 }
+
+bool CEngineContext::RegisterWindow(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWidth, uint32 InitialHeight, bool bRequestVSync) const
+{
+    return m_RHIContext->RegisterWindow(WindowID, NativeWindowHandle, InitialWidth, InitialHeight, bRequestVSync);
+}
+
+void CEngineContext::UnregisterWindow(uint32 WindowID) const
+{
+    m_RHIContext->UnregisterWindow(WindowID);
+}

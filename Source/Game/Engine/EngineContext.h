@@ -19,6 +19,9 @@ public:
     bool Initialize(ERHIBackend RHIBackend, uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight,
         bool bRequestVSync);
     void Shutdown();
+    
+    bool RegisterWindow(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWidth, uint32 InitialHeight, bool bRequestVSync) const;
+    void UnregisterWindow(uint32 WindowID) const;
 
     IRHIContext& GetRHIContext() const { return *m_RHIContext; }
     CRenderer& GetRenderer() const { return *m_Renderer; }

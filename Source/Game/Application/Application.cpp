@@ -94,6 +94,9 @@ CWindow* CApplication::MakeWindow(const FWindowSpecification& Specification)
     {
         m_EngineContext->GetEventBroadcaster().Broadcast(Event);
     });
+    
+    if (!m_EngineContext->RegisterWindow(Window->GetNativeWindowID(), Window->GetNativeHandle(), Window->GetWidth(), Window->GetHeight(), Window->WantsVSync()))
+        return nullptr;
 
     CWindow* RawWindow = Window.get();
     m_SecondaryWindows[Window->GetNativeWindowID()] = std::move(Window);
@@ -103,11 +106,15 @@ CWindow* CApplication::MakeWindow(const FWindowSpecification& Specification)
 
 void CApplication::DestroyWindow(const CWindow* Window)
 {
+    m_EngineContext->UnregisterWindow(Window->GetNativeWindowID());
+    
     m_SecondaryWindows.erase(Window->GetNativeWindowID());
 }
 
 void CApplication::DestroyWindowByID(uint32 WindowID)
 {
+    m_EngineContext->UnregisterWindow(WindowID);
+    
     m_SecondaryWindows.erase(WindowID);
 }
 
