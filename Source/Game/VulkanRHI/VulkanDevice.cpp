@@ -1,6 +1,6 @@
 ﻿#include "FunkinPCH.h"
 #include "VulkanDevice.h"
-
+#include "TracyVulkanAdapter.h"
 #include "VulkanDebugUtils.h"
 
 constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
@@ -36,11 +36,17 @@ CVulkanDevice::CVulkanDevice(const vk::Instance& VulkanInstance, const vk::Surfa
     
     /* -- Other Resources -- */
     CreateCommandPool();
+    InitializeTracyContext(VulkanInstance);
 }
 
 void CVulkanDevice::Destroy() const
 {
     WaitIdle();
+    
+    #ifdef TRACY_ENABLE
+        if (m_TracyVulkanContext)
+            TracyVkDestroy(m_TracyVulkanContext)
+    #endif
     
     m_LogicalDevice.destroyCommandPool(m_CommandPool);
     m_LogicalDevice.destroy();
@@ -196,6 +202,25 @@ void CVulkanDevice::CreateCommandPool()
     CommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
     
     VK_CHECK_RESULT(m_LogicalDevice.createCommandPool(CommandPoolCreateInfo), m_CommandPool, "Failed to create Vulkan command pool!")
+}
+
+void CVulkanDevice::InitializeTracyContext(const vk::Instance& VulkanInstance)
+{
+    #ifdef TRACY_ENABLE
+        vk::CommandBufferAllocateInfo CommandBufferAllocateInfo = {};
+        CommandBufferAllocateInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+        CommandBufferAllocateInfo.commandPool = m_CommandPool;
+        CommandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
+        CommandBufferAllocateInfo.commandBufferCount = 1;
+    
+        std::vector<vk::CommandBuffer> InitializationCommandBuffers;
+        VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), InitializationCommandBuffers, "Failed to allocate temporary Vulkan command buffer for Tracy!")
+
+        const vk::CommandBuffer InitializationCommandBuffer = InitializationCommandBuffers[0];
+
+        m_TracyVulkanContext = TracyVkContextCalibrated(VulkanInstance, m_PhysicalDevice, m_LogicalDevice, m_GraphicsQueue, InitializationCommandBuffer,
+                VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr, VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr)
+    #endif
 }
 
 bool CVulkanDevice::IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface)

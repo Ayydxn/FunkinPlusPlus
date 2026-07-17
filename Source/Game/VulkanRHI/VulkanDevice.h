@@ -2,6 +2,8 @@
 
 #include "VulkanIncludes.h"
 
+namespace tracy { struct VkCtx; }
+
 struct FVulkanDeviceInfo
 {
     vk::PhysicalDeviceProperties PhysicalDeviceProperties;
@@ -55,10 +57,12 @@ public:
     const vk::Queue& GetPresentQueue() const { return m_PresentQueue; }
     const FVulkanDeviceInfo& GetDeviceInfo() const { return m_DeviceInfo; }
     vk::CommandBuffer GetCommandBuffer(uint32 WindowID, uint32 FrameIndex) const;
+    tracy::VkCtx* GetTracyContext() const { return m_TracyVulkanContext; }
 private:
     void SelectPhysicalDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface);
     void CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice);
     void CreateCommandPool();
+    void InitializeTracyContext(const vk::Instance& VulkanInstance);
     
     bool IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);
     bool DoesPhysicalDeviceSupportRequiredExtensions(const vk::PhysicalDevice& PhysicalDevice);
@@ -76,10 +80,12 @@ private:
     FVulkanDeviceInfo m_DeviceInfo;
     FQueueFamilyIndices m_QueueFamilyIndices;
     
+    // Always null in Distribution builds. If using this outside of the Tracy Vulkan macros, you will have to null-check it. 
+    tracy::VkCtx* m_TracyVulkanContext = nullptr;
+    
     vk::Queue m_GraphicsQueue;
     vk::Queue m_PresentQueue;
     vk::CommandPool m_CommandPool;
     vk::PhysicalDevice m_PhysicalDevice;
     vk::Device m_LogicalDevice;
-    
 };

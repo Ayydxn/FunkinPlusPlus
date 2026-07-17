@@ -13,8 +13,6 @@
     #define FUNKIN_PROFILE_SCOPE(...) FUNKIN_PROFILE_FUNCTION(__VA_ARGS__)
     #define FUNKIN_PROFILE_SCOPE_DYNAMIC(Name) ZoneScoped; ZoneName(Name, strlen(Name))
     #define FUNKIN_PROFILE_THREAD(...) tracy::SetThreadName(__VA_ARGS__)
-
-    #define FUNKIN_PROFILE_GPU(...) TracyGpuZone(__VA_ARGS__)
 #else
     #define FUNKIN_PROFILE_MARK_FRAME
 
@@ -22,6 +20,4 @@
     #define FUNKIN_PROFILE_SCOPE(...)
     #define FUNKIN_PROFILE_SCOPE_DYNAMIC(Name)
     #define FUNKIN_PROFILE_THREAD(...)
-
-    #define FUNKIN_PROFILE_GPU(...)
 #endif

@@ -2,6 +2,7 @@
 #include "VulkanDynamicRHI.h"
 #include "VulkanDebugUtils.h"
 #include "VulkanUtils.h"
+#include "TracyVulkanAdapter.h"
 
 CVulkanDynamicRHI::CVulkanDynamicRHI(CVulkanContext& VulkanContext)
     : m_VulkanContext(VulkanContext) {}
@@ -60,7 +61,9 @@ void CVulkanDynamicRHI::BeginFrame()
         RenderingInfo.layerCount = 1;
         RenderingInfo.colorAttachmentCount = 1;
         RenderingInfo.pColorAttachments = &ColorAttachmentInfo;
-    
+        
+        FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
+            
         CommandBuffer.beginRendering(RenderingInfo);
     }
 }
@@ -85,6 +88,8 @@ void CVulkanDynamicRHI::EndFrame()
         CVulkanUtils::TransitionImageLayout(CommandBuffer, AcquiredImage, vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             vk::PipelineStageFlagBits2::eBottomOfPipe, vk::AccessFlagBits2::eColorAttachmentWrite,
             vk::AccessFlagBits2::eNone, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+        
+        FUNKIN_PROFILE_VULKAN_COLLECT(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer)
     
         VK_CHECK_RESULT_VOID(CommandBuffer.end(), "Failed to end recording a Vulkan command buffer for window ID {}!", SwapChain->GetWindowID())
 
