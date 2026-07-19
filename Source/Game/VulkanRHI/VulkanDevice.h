@@ -2,7 +2,7 @@
 
 #include "VulkanIncludes.h"
 
-namespace tracy { struct VkCtx; }
+namespace tracy { class VkCtx; }
 
 struct FVulkanDeviceInfo
 {
@@ -66,6 +66,7 @@ private:
     
     bool IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);
     bool DoesPhysicalDeviceSupportRequiredExtensions(const vk::PhysicalDevice& PhysicalDevice);
+    bool DoesPhysicalDeviceSupportRequiredFeatures(const vk::PhysicalDevice& PhysicalDevice);
     uint32 RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice);
     
     FQueueFamilyIndices FindQueueFamilies(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);

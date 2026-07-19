@@ -5,7 +5,7 @@ project "Game"
     pchsource "%{SourceDir}/Game/FunkinPCH.cpp"
     pchheader "FunkinPCH.h"
     
-    IncludeDependencies({ "spdlog", "SDL3", "tracy", "Vulkan" })
+    IncludeDependencies({ "spdlog", "SDL3", "tracy", "Vulkan", "Slang" })
 
     files
     {
@@ -42,5 +42,6 @@ project "Game"
         
         postbuildcommands
         {
-            '{COPYFILE} "%{wks.location}/Source/ThirdParty/SDL3/Binaries/Win64/*.dll" "%{cfg.buildtarget.directory}"'
+            '{COPYFILE} "%{wks.location}/Source/ThirdParty/SDL3/Binaries/Win64/*.dll" "%{cfg.buildtarget.directory}"',
+            '{COPYFILE} "%{wks.location}/Source/ThirdParty/Slang/Binaries/Win64/*.dll" "%{cfg.buildtarget.directory}"'
         }

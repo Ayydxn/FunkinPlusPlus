@@ -1,8 +1,8 @@
 ﻿#include "FunkinPCH.h"
 #include "VulkanDynamicRHI.h"
+#include "TracyVulkanAdapter.h"
 #include "VulkanDebugUtils.h"
 #include "VulkanUtils.h"
-#include "TracyVulkanAdapter.h"
 
 CVulkanDynamicRHI::CVulkanDynamicRHI(CVulkanContext& VulkanContext)
     : m_VulkanContext(VulkanContext) {}
@@ -12,8 +12,8 @@ void CVulkanDynamicRHI::BeginFrame()
     for (uint32 WindowID : m_VulkanContext.GetOrderedWindowIDs())
     {
         CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
-        if (!SwapChain && !SwapChain->IsValid())
-            return;
+        if (!SwapChain || !SwapChain->IsValid())
+            continue;
     
         const FAcquiredFrame AcquiredFrame = SwapChain->AcquireNextImage();
         if (AcquiredFrame.AcquisitionResult == vk::Result::eErrorOutOfDateKHR)
@@ -21,7 +21,7 @@ void CVulkanDynamicRHI::BeginFrame()
             const vk::Extent2D& CurrentExtent = SwapChain->GetExtent();
             SwapChain->Resize(CurrentExtent.width, CurrentExtent.height);
         
-            return;
+            continue;
         }
     
         verifyFunkinf(AcquiredFrame.AcquisitionResult == vk::Result::eSuccess || AcquiredFrame.AcquisitionResult == vk::Result::eSuboptimalKHR,
@@ -63,7 +63,7 @@ void CVulkanDynamicRHI::BeginFrame()
         RenderingInfo.pColorAttachments = &ColorAttachmentInfo;
         
         FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
-            
+        
         CommandBuffer.beginRendering(RenderingInfo);
     }
 }

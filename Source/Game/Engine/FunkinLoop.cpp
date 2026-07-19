@@ -4,7 +4,7 @@
 #include "Events/WindowEvents.h"
 #include "Logging/Logging.h"
 #include "Misc/CommandLine.h"
-
+#include "Misc/Paths.h"
 
 bool CFunkinLoop::PreInitialize()
 {
@@ -21,6 +21,8 @@ bool CFunkinLoop::Initialize()
     
     if (!m_Application.Initialize(m_EngineContext, BuildWindowSpecification()))
         return false;
+    
+    CPaths::Initialize();
     
     const uint32 MainWindowID = m_Application.GetMainWindow().GetNativeWindowID();
     const auto MainWindowWidth = m_Application.GetMainWindow().GetWidth();

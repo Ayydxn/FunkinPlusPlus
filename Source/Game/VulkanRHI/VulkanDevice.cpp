@@ -177,10 +177,15 @@ void CVulkanDevice::CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice
         DeviceQueueCreateInfos.push_back(DeviceQueueCreateInfo);
     }
     
+    vk::PhysicalDeviceVulkan11Features PhysicalDeviceVulkan11Features = {};
+    PhysicalDeviceVulkan11Features.sType = vk::StructureType::ePhysicalDeviceVulkan11Features;
+    PhysicalDeviceVulkan11Features.shaderDrawParameters = vk::True;
+    
     vk::PhysicalDeviceVulkan13Features PhysicalDeviceVulkan13Features = {};
     PhysicalDeviceVulkan13Features.sType = vk::StructureType::ePhysicalDeviceVulkan13Features;
     PhysicalDeviceVulkan13Features.dynamicRendering = vk::True;
     PhysicalDeviceVulkan13Features.synchronization2 = vk::True;
+    PhysicalDeviceVulkan13Features.pNext = &PhysicalDeviceVulkan11Features;
     
     vk::DeviceCreateInfo DeviceCreateInfo = {};
     DeviceCreateInfo.sType = vk::StructureType::eDeviceCreateInfo;
@@ -228,9 +233,10 @@ bool CVulkanDevice::IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalD
     const vk::PhysicalDeviceProperties PhysicalDeviceProperties = PhysicalDevice.getProperties();
     const bool bIsDeviceTypeAppropriate = PhysicalDeviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu || PhysicalDeviceProperties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
     const bool bDoesPhysicalDeviceSupportRequiredExtensions = DoesPhysicalDeviceSupportRequiredExtensions(PhysicalDevice);
+    const bool bDoesPhysicalDeviceSupportRequiredFeatures = DoesPhysicalDeviceSupportRequiredFeatures(PhysicalDevice);
     const bool bHasSuitableQueueFamilies = FindQueueFamilies(PhysicalDevice, ProbeSurface).IsComplete();
     
-    return bIsDeviceTypeAppropriate && bDoesPhysicalDeviceSupportRequiredExtensions && bHasSuitableQueueFamilies;
+    return bIsDeviceTypeAppropriate && bDoesPhysicalDeviceSupportRequiredExtensions && bDoesPhysicalDeviceSupportRequiredFeatures && bHasSuitableQueueFamilies;
 }
 
 bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(const vk::PhysicalDevice& PhysicalDevice)
@@ -249,6 +255,20 @@ bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(const vk::Physic
         RequiredExtensions.erase(AvailablePhysicalDeviceExtension.extensionName.data());
 
     return RequiredExtensions.empty();
+}
+
+bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredFeatures(const vk::PhysicalDevice& PhysicalDevice)
+{
+    vk::PhysicalDeviceVulkan11Features PhysicalDeviceVulkan11Features = {};
+    PhysicalDeviceVulkan11Features.sType = vk::StructureType::ePhysicalDeviceVulkan11Features;
+
+    vk::PhysicalDeviceFeatures2 PhysicalDeviceFeatures2 = {};
+    PhysicalDeviceFeatures2.sType = vk::StructureType::ePhysicalDeviceFeatures2;
+    PhysicalDeviceFeatures2.pNext = &PhysicalDeviceVulkan11Features;
+
+    PhysicalDevice.getFeatures2(&PhysicalDeviceFeatures2);
+
+    return PhysicalDeviceVulkan11Features.shaderDrawParameters == vk::True;
 }
 
 uint32 CVulkanDevice::RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice)

@@ -249,4 +249,14 @@ Register("Vulkan", {
     IncludePaths = { ThirdPartyFolder .. "Vulkan/Include" }
 })
 
+Register("Slang", {
+    IncludePaths = { ThirdPartyFolder .. "Slang/Include" },
+    Platforms = {
+        Windows = {
+            LibraryPaths = { ThirdPartyFolder .. "Slang/Lib/Win64" },
+            Links = { ThirdPartyFolder .. "Slang/Lib/Win64/slang.lib" },
+        }
+    }
+})
+
 ListDependencies()

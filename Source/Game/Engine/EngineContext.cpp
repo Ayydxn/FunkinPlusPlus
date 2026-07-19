@@ -4,6 +4,8 @@
 bool CEngineContext::Initialize(ERHIBackend RHIBackend, uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight,
         bool bRequestVSync)
 {
+    m_Instance = this;
+    
     m_InputState.Initialize(m_EventBroadcaster);
     
     m_RHIContext = CreateRHIContext(RHIBackend);
@@ -12,13 +14,16 @@ bool CEngineContext::Initialize(ERHIBackend RHIBackend, uint32 WindowID, const F
     
     m_DynamicRHI = CreateDynamicRHI(RHIBackend, *m_RHIContext);
     
-    m_Renderer = std::make_unique<CRenderer>(*m_DynamicRHI);
+    m_Renderer = std::make_unique<CRenderer>(*m_DynamicRHI, RHIBackend, *m_RHIContext);
+    m_Renderer->Initialize();
     
     return true;
 }
 
 void CEngineContext::Shutdown()
 {
+    m_Instance = nullptr;
+    
     m_Renderer.reset();
     m_DynamicRHI.reset();
     
@@ -36,4 +41,11 @@ bool CEngineContext::RegisterWindow(uint32 WindowID, const FNativeWindowHandle& 
 void CEngineContext::UnregisterWindow(uint32 WindowID) const
 {
     m_RHIContext->UnregisterWindow(WindowID);
+}
+
+CEngineContext& CEngineContext::GetInstance()
+{
+    verifyFunkinf(m_Instance, "Attempted to get an instance of CEngineContext before one was available!")
+    
+    return *m_Instance;
 }

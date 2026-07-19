@@ -22,6 +22,8 @@ public:
     
     bool RegisterWindow(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWidth, uint32 InitialHeight, bool bRequestVSync) const;
     void UnregisterWindow(uint32 WindowID) const;
+    
+    static CEngineContext& GetInstance();
 
     IRHIContext& GetRHIContext() const { return *m_RHIContext; }
     CRenderer& GetRenderer() const { return *m_Renderer; }
@@ -31,6 +33,8 @@ public:
 private:
     void SetFrameStats(const FFrameStats& FrameStats) { m_FrameStats = FrameStats; }
 private:
+    inline static CEngineContext* m_Instance = nullptr;
+    
     std::unique_ptr<IRHIContext> m_RHIContext;
     std::unique_ptr<IDynamicRHI> m_DynamicRHI;
     std::unique_ptr<CRenderer> m_Renderer;
