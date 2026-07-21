@@ -13,18 +13,13 @@ public:
     
     void PumpMessages();
     
-    CWindow* MakeWindow(const FWindowSpecification& Specification);
-    void DestroyWindow(const CWindow* Window);
-    void DestroyWindowByID(uint32 WindowID);
-    
-    CWindow& GetMainWindow() { return *m_MainWindow; }
-    const CWindow& GetMainWindow() const { return *m_MainWindow; }
+    CWindow& GetWindow() { return *m_Window; }
+    const CWindow& GetWindow() const { return *m_Window; }
 private:
     // Returns true if a gamepad event was received and handled, false otherwise.
     bool HandleGamepadEvent(const SDL_Event& Event, uint64 CaptureTimestampNs) const;
 private:
-    std::unordered_map<uint32, std::unique_ptr<CWindow>> m_SecondaryWindows; // SDL Window ID -> CDesktopWindow instance
-    std::unique_ptr<CWindow> m_MainWindow;
+    std::unique_ptr<CWindow> m_Window;
     
     CEngineContext* m_EngineContext = nullptr;
 };

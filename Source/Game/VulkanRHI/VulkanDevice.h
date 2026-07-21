@@ -39,44 +39,41 @@ struct FPresentInfo
 class CVulkanDevice
 {
 public:
-    explicit CVulkanDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface);
+    explicit CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     
     void Destroy() const;
-    
-    void RegisterWindow(uint32 WindowID, uint32 FramesInFlight);
-    void UnregisterWindow(uint32 WindowID);
     
     void WaitIdle() const;
     vk::Result Submit(const FSubmitInfo& SubmitInfo) const;
     vk::Result Present(const FPresentInfo& PresentInfo) const;
     
-    const vk::PhysicalDevice& GetPhysicalDevice() const { return m_PhysicalDevice; }
-    const vk::Device& GetLogicalDevice() const { return m_LogicalDevice; }
-    const FQueueFamilyIndices GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
-    const vk::Queue& GetGraphicsQueue() const { return m_GraphicsQueue; }
-    const vk::Queue& GetPresentQueue() const { return m_PresentQueue; }
+    vk::PhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
+    vk::Device GetLogicalDevice() const { return m_LogicalDevice; }
+    const FQueueFamilyIndices& GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
+    vk::Queue GetGraphicsQueue() const { return m_GraphicsQueue; }
+    vk::Queue GetPresentQueue() const { return m_PresentQueue; }
     const FVulkanDeviceInfo& GetDeviceInfo() const { return m_DeviceInfo; }
-    vk::CommandBuffer GetCommandBuffer(uint32 WindowID, uint32 FrameIndex) const;
+    vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const;
     tracy::VkCtx* GetTracyContext() const { return m_TracyVulkanContext; }
 private:
-    void SelectPhysicalDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface);
-    void CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice);
-    void CreateCommandPool();
-    void InitializeTracyContext(const vk::Instance& VulkanInstance);
+    void SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
+    void CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice);
+    void CreateCommandPoolAndCommandBuffers();
+    void InitializeTracyContext(vk::Instance VulkanInstance);
     
-    bool IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);
-    bool DoesPhysicalDeviceSupportRequiredExtensions(const vk::PhysicalDevice& PhysicalDevice);
-    bool DoesPhysicalDeviceSupportRequiredFeatures(const vk::PhysicalDevice& PhysicalDevice);
-    uint32 RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice);
+    bool IsPhysicalDeviceSuitable(vk::PhysicalDevice PhysicalDevice, vk::SurfaceKHR ProbeSurface);
+    bool DoesPhysicalDeviceSupportRequiredExtensions(vk::PhysicalDevice PhysicalDevice);
+    bool DoesPhysicalDeviceSupportRequiredFeatures(vk::PhysicalDevice PhysicalDevice);
+    uint32 RatePhysicalDevice(vk::PhysicalDevice PhysicalDevice);
     
-    FQueueFamilyIndices FindQueueFamilies(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface);
+    FQueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice PhysicalDevice, vk::SurfaceKHR ProbeSurface);
     
     // Physical device helpers
     std::string GetVendorNameFromID(uint32 VendorID);
     std::string UnpackDriverVersion(uint32 VendorID, uint32 DriverVersion);
     std::string UnpackVulkanAPIVersion(uint32 VulkanAPIVersion);
 private:
-    std::unordered_map<uint32, std::vector<vk::CommandBuffer>> m_WindowCommandBuffers;
+    std::vector<vk::CommandBuffer> m_CommandBuffers;
     
     FVulkanDeviceInfo m_DeviceInfo;
     FQueueFamilyIndices m_QueueFamilyIndices;

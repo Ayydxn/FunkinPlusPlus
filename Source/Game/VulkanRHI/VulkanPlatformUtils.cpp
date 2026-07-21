@@ -3,7 +3,7 @@
 #include "VulkanDebugUtils.h"
 #include "RHICore/RHIContext.h"
 
-vk::SurfaceKHR CVulkanPlatformUtils::CreateSurface(const vk::Instance& VulkanInstance, const FNativeWindowHandle& NativeWindowHandle)
+vk::SurfaceKHR CVulkanPlatformUtils::CreateSurface(vk::Instance VulkanInstance, const FNativeWindowHandle& NativeWindowHandle)
 {
     vk::SurfaceKHR Surface;
     

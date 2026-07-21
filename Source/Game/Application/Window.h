@@ -83,7 +83,6 @@ public:
     float GetDisplayRefreshRate() const;
     
     FNativeWindowHandle GetNativeHandle() const;
-    uint32 GetNativeWindowID() const { return m_WindowID; }
 protected:
     struct CWindowState
     {
@@ -101,5 +100,4 @@ protected:
     FWindowSpecification m_Specification = {};
 private:
     SDL_Window* m_WindowHandle = nullptr;
-    uint32 m_WindowID = 0;
 };

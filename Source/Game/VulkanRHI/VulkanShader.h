@@ -22,7 +22,7 @@ private:
         vk::ShaderStageFlagBits ShaderStageFlag;
         std::string EntryPointName;
     };
-
+private:
     std::vector<FShaderModuleStage> m_ShaderModuleStages;
 
     CVulkanDevice& m_VulkanDevice;

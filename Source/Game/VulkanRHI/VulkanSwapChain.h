@@ -19,7 +19,7 @@ struct FAcquiredFrame
 class CVulkanSwapChain
 {
 public:
-    CVulkanSwapChain(const std::shared_ptr<CVulkanDevice>& VulkanDevice, vk::Instance VulkanInstance, uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle,
+    CVulkanSwapChain(CVulkanDevice& VulkanDevice, vk::Instance VulkanInstance,const FNativeWindowHandle& NativeWindowHandle,
         const vk::Extent2D& InitialSize, uint32 FramesInFlight, bool bRequestVSync);
     
     void Destroy(const vk::Instance& VulkanInstance);
@@ -30,7 +30,7 @@ public:
     
     bool IsValid() const { return static_cast<bool>(m_SwapChain); }
     
-    vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const { return m_VulkanDevice->GetCommandBuffer(m_WindowID, FrameIndex); }
+    vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const { return m_VulkanDevice.GetCommandBuffer(FrameIndex); }
     vk::Image GetImage(uint32 ImageIndex) const { return m_SwapChainImages[ImageIndex]; }
     vk::ImageView GetImageView(uint32 ImageIndex) const { return m_SwapChainImageViews[ImageIndex]; }
     vk::Semaphore GetRenderFinishedSemaphore(uint32 ImageIndex) const { return m_RenderFinishedSemaphores[ImageIndex]; }
@@ -39,34 +39,34 @@ public:
     vk::Format GetImageFormat() const { return m_SwapChainImageFormat; }
     const vk::Extent2D& GetExtent() const { return m_SwapChainExtent; }
     vk::SwapchainKHR GetHandle() const { return m_SwapChain; }
-    uint32 GetWindowID() const { return m_WindowID; }
 private:
-    void CreateSwapChainAndDependents(const vk::Extent2D& RequestedSize, const vk::SwapchainKHR& OldSwapchain);
+    void CreateSwapChainAndDependents(const vk::Extent2D& RequestedSize, vk::SwapchainKHR OldSwapchain);
     void DestroySwapChainAndDependents();
     
-    void CreateSwapChain(const vk::Extent2D& RequestedSize, const vk::SwapchainKHR& OldSwapchain);
+    void CreateSwapChain(const vk::Extent2D& RequestedSize, vk::SwapchainKHR OldSwapchain);
     void CreateImageViews();
     void CreateRenderFinishedSemaphores();
     
     void CreateFrameSyncObjects();
     void DestroyFrameSyncObjects();
     
-    void SelectImageFormatAndColorSpace(vk::Format& OutImageFormat, vk::ColorSpaceKHR& OutColorSpace);
-    vk::PresentModeKHR SelectPresentMode();
+    void SelectImageFormatAndColorSpace(vk::Format& OutImageFormat, vk::ColorSpaceKHR& OutColorSpace) const;
+    vk::PresentModeKHR SelectPresentMode() const;
 private:
     std::vector<vk::Image> m_SwapChainImages;
     std::vector<vk::ImageView> m_SwapChainImageViews;
     std::vector<vk::Semaphore> m_RenderFinishedSemaphores;
     std::vector<FFrameSyncObjects> m_FrameSyncObjects;
     
-    std::shared_ptr<CVulkanDevice> m_VulkanDevice;
+    CVulkanDevice& m_VulkanDevice;
     
+    vk::PhysicalDevice m_PhysicalDevice;
+    vk::Device m_LogicalDevice;
     vk::SurfaceKHR m_Surface;
     vk::Format m_SwapChainImageFormat;
     vk::Extent2D m_SwapChainExtent;
     vk::SwapchainKHR m_SwapChain;
     
-    uint32 m_WindowID = 0;
     uint32 m_FramesInFlight = 0;
     uint32 m_CurrentFrameIndex = 0;
     

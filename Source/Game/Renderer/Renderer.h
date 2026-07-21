@@ -15,11 +15,11 @@ public:
     
     void Initialize();
     
-    bool BeginFrame(uint32 WindowID) const;
-    void EndFrame(uint32 WindowID) const;
+    bool BeginFrame() const;
+    void EndFrame() const;
     
-    void BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline) const;
-    void Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount) const;
+    void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const;
+    void Draw(uint32 VertexCount, uint32 InstanceCount) const;
     
     std::shared_ptr<IGraphicsPipeline> CreateGraphicsPipeline(const IShader& Shader) const;
     

@@ -8,9 +8,9 @@
 CVulkanDynamicRHI::CVulkanDynamicRHI(CVulkanContext& VulkanContext)
     : m_VulkanContext(VulkanContext) {}
 
-bool CVulkanDynamicRHI::BeginFrame(uint32 WindowID)
+bool CVulkanDynamicRHI::BeginFrame()
 {
-    CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
+    const  std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
     if (!SwapChain || !SwapChain->IsValid())
         return false;
     
@@ -24,18 +24,18 @@ bool CVulkanDynamicRHI::BeginFrame(uint32 WindowID)
     }
     
     verifyFunkinf(AcquiredFrame.AcquisitionResult == vk::Result::eSuccess || AcquiredFrame.AcquisitionResult == vk::Result::eSuboptimalKHR,
-        "Failed to acquire the next swapchain image for window ID {}! ({})", SwapChain->GetWindowID(), vk::to_string(AcquiredFrame.AcquisitionResult))
+        "Failed to acquire the next swapchain image! ({})",vk::to_string(AcquiredFrame.AcquisitionResult))
     
-    m_AcquiredFramesThisFrame[WindowID] = AcquiredFrame;
+    m_CurrentlyAcquiredFrame = AcquiredFrame;
     
     const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
-    VK_CHECK_RESULT_VOID(CommandBuffer.reset(), "Failed to reset Vulkan command buffer for window ID {}!", SwapChain->GetWindowID())
+    VK_CHECK_RESULT_VOID(CommandBuffer.reset(), "Failed to reset the Vulkan command buffer!")
     
     vk::CommandBufferBeginInfo CommandBufferBeginInfo = {};
     CommandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
     CommandBufferBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
     
-    VK_CHECK_RESULT_VOID(CommandBuffer.begin(CommandBufferBeginInfo), "Failed to begin recording a Vulkan command buffer for window ID {}!", SwapChain->GetWindowID())
+    VK_CHECK_RESULT_VOID(CommandBuffer.begin(CommandBufferBeginInfo), "Failed to begin recording a Vulkan command buffer!")
     
     const vk::Image AcquiredImage = SwapChain->GetImage(AcquiredFrame.ImageIndex);
     
@@ -68,15 +68,13 @@ bool CVulkanDynamicRHI::BeginFrame(uint32 WindowID)
     return true;
 }
 
-void CVulkanDynamicRHI::EndFrame(uint32 WindowID)
+void CVulkanDynamicRHI::EndFrame()
 {
-    CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
-        
-    const auto AcquiredFrameIterator = m_AcquiredFramesThisFrame.find(WindowID);
-    if (!SwapChain || !SwapChain->IsValid() || AcquiredFrameIterator == m_AcquiredFramesThisFrame.end())
+    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
+    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
         return;
     
-    const FAcquiredFrame AcquiredFrame = AcquiredFrameIterator->second;
+    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
     
     const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
     CommandBuffer.endRendering();
@@ -89,7 +87,7 @@ void CVulkanDynamicRHI::EndFrame(uint32 WindowID)
     
     FUNKIN_PROFILE_VULKAN_COLLECT(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer)
     
-    VK_CHECK_RESULT_VOID(CommandBuffer.end(), "Failed to end recording a Vulkan command buffer for window ID {}!", SwapChain->GetWindowID())
+    VK_CHECK_RESULT_VOID(CommandBuffer.end(), "Failed to stop recording a Vulkan command buffer!")
 
     const CVulkanDevice& VulkanDevice = m_VulkanContext.GetDevice();
     
@@ -101,8 +99,7 @@ void CVulkanDynamicRHI::EndFrame(uint32 WindowID)
     SubmitInfo.SignalFence = SwapChain->GetInFlightFence(AcquiredFrame.FrameIndex);
     
     const vk::Result SubmitResult = VulkanDevice.Submit(SubmitInfo);
-    verifyFunkinf(SubmitResult == vk::Result::eSuccess, "Failed to submit the Vulkan command buffer for window ID {}! ({})", SwapChain->GetWindowID(),
-        vk::to_string(SubmitResult))
+    verifyFunkinf(SubmitResult == vk::Result::eSuccess, "Failed to submit the Vulkan command buffer! ({})", vk::to_string(SubmitResult))
     
     FPresentInfo PresentInfo;
     PresentInfo.SwapChain = SwapChain->GetHandle();
@@ -117,27 +114,26 @@ void CVulkanDynamicRHI::EndFrame(uint32 WindowID)
     }
     else
     {
-        verifyFunkinf(PresentResult == vk::Result::eSuccess, "Failed to present the Vulkan swapchain for window ID {}! ({})", SwapChain->GetWindowID(),
-            vk::to_string(PresentResult))
+        verifyFunkinf(PresentResult == vk::Result::eSuccess, "Failed to present the Vulkan swapchain! ({})", vk::to_string(PresentResult))
     }
+    
+    m_CurrentlyAcquiredFrame.reset();
     
     SwapChain->AdvanceFrame();
 }
 
-void CVulkanDynamicRHI::BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline)
+void CVulkanDynamicRHI::BindPipeline(const IGraphicsPipeline& GraphicsPipeline)
 {
-    const CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
-        
-    const auto AcquiredFrameIterator = m_AcquiredFramesThisFrame.find(WindowID);
-    if (!SwapChain || !SwapChain->IsValid() || AcquiredFrameIterator == m_AcquiredFramesThisFrame.end())
+    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
+    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
         return;
     
-    const FAcquiredFrame AcquiredFrame = AcquiredFrameIterator->second;
+    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
     const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
     
     const auto& VulkanPipeline = dynamic_cast<const CVulkanGraphicsPipeline&>(GraphicsPipeline);
     
-    const vk::Extent2D& SwapChainExtent = m_VulkanContext.GetSwapChain(WindowID)->GetExtent();
+    const vk::Extent2D& SwapChainExtent = m_VulkanContext.GetSwapChain()->GetExtent();
     
     vk::Viewport Viewport;
     Viewport.x = 0.0f;
@@ -147,21 +143,23 @@ void CVulkanDynamicRHI::BindPipeline(uint32 WindowID, const IGraphicsPipeline& G
     Viewport.minDepth = 0.0f;
     Viewport.maxDepth = 1.0f;
     
+    FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
+    
     CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanPipeline.GetHandle());
     CommandBuffer.setViewport(0, Viewport);
     CommandBuffer.setScissor(0, vk::Rect2D({ 0, 0 }, SwapChainExtent));
 }
 
-void CVulkanDynamicRHI::Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount)
+void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)
 {
-    const CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
-        
-    const auto AcquiredFrameIterator = m_AcquiredFramesThisFrame.find(WindowID);
-    if (!SwapChain || !SwapChain->IsValid() || AcquiredFrameIterator == m_AcquiredFramesThisFrame.end())
+    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
+    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
         return;
     
-    const FAcquiredFrame AcquiredFrame = AcquiredFrameIterator->second;
+    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
     const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    
+    FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     
     CommandBuffer.draw(VertexCount, InstanceCount, 0, 0);
 }

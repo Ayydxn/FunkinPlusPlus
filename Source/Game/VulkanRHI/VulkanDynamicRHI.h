@@ -9,13 +9,13 @@ public:
     explicit CVulkanDynamicRHI(CVulkanContext& VulkanContext);
     ~CVulkanDynamicRHI() override = default;
     
-    bool BeginFrame(uint32 WindowID) override;
-    void EndFrame(uint32 WindowID) override;
+    bool BeginFrame() override;
+    void EndFrame() override;
     
-    void BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline) override;
-    void Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount) override;
+    void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) override;
+    void Draw(uint32 VertexCount, uint32 InstanceCount) override;
 private:
-    std::unordered_map<uint32, FAcquiredFrame> m_AcquiredFramesThisFrame;
+    std::optional<FAcquiredFrame> m_CurrentlyAcquiredFrame = std::nullopt;
     
     CVulkanContext& m_VulkanContext;
 };

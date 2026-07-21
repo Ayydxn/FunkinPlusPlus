@@ -6,5 +6,5 @@
 class CVulkanPlatformUtils
 {
 public:
-    static vk::SurfaceKHR CreateSurface(const vk::Instance& VulkanInstance, const FNativeWindowHandle& NativeWindowHandle);
+    static vk::SurfaceKHR CreateSurface(vk::Instance VulkanInstance, const FNativeWindowHandle& NativeWindowHandle);
 };

@@ -12,8 +12,8 @@ public:
     
     void Invalidate() override;
 
-    const vk::Pipeline& GetHandle() const { return m_Pipeline; }
-    const vk::PipelineLayout& GetLayout() const { return m_PipelineLayout; }
+    vk::Pipeline GetHandle() const { return m_Pipeline; }
+    vk::PipelineLayout GetLayout() const { return m_PipelineLayout; }
 private:
     void CreatePipelineLayoutAndCache();
 private:

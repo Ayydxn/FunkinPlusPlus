@@ -9,24 +9,24 @@ void CRenderer::Initialize()
     LoadShader(CPaths::GetShadersDirectory() / "TriangleTest");
 }
 
-bool CRenderer::BeginFrame(uint32 WindowID) const
+bool CRenderer::BeginFrame() const
 {
-    return m_DynamicRHI.BeginFrame(WindowID);
+    return m_DynamicRHI.BeginFrame();
 }
 
-void CRenderer::EndFrame(uint32 WindowID) const
+void CRenderer::EndFrame() const
 {
-    m_DynamicRHI.EndFrame(WindowID);
+    m_DynamicRHI.EndFrame();
 }
 
-void CRenderer::BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline) const
+void CRenderer::BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const
 {
-    m_DynamicRHI.BindPipeline(WindowID, GraphicsPipeline);
+    m_DynamicRHI.BindPipeline(GraphicsPipeline);
 }
 
-void CRenderer::Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount) const
+void CRenderer::Draw(uint32 VertexCount, uint32 InstanceCount) const
 {
-    m_DynamicRHI.Draw(WindowID, VertexCount, InstanceCount);
+    m_DynamicRHI.Draw(VertexCount, InstanceCount);
 }
 
 std::shared_ptr<IGraphicsPipeline> CRenderer::CreateGraphicsPipeline(const IShader& Shader) const

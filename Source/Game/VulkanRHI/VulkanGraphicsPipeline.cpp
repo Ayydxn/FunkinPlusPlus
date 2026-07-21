@@ -5,15 +5,7 @@
 CVulkanGraphicsPipeline::CVulkanGraphicsPipeline(const CVulkanContext& VulkanContext, const CVulkanShader& VulkanShader)
     : m_VulkanDevice(VulkanContext.GetDevice()), m_VulkanShader(VulkanShader)
 {
-    const std::vector<uint32> OrderedWindowIDs = VulkanContext.GetOrderedWindowIDs();
-    verifyFunkinf(!OrderedWindowIDs.empty(), "Failed to create Vulkan graphics pipeline! No windows are registered with the Vulkan context!")
-    
-    const CVulkanSwapChain* MainWindowSwapChain = VulkanContext.GetSwapChain(OrderedWindowIDs[0]);
-    verifyFunkinf(MainWindowSwapChain, "Failed to create Vulkan graphics pipeline! The main window has no swapchain!")
-    
-    // TODO: (Ayydxn) Get the swapchain of the window that this pipeline will be used for.
-    // Not good assume that the image format of every window's swapchain will match that of the main game window's. 
-    m_ColorAttachmentFormat = MainWindowSwapChain->GetImageFormat();
+    m_ColorAttachmentFormat = VulkanContext.GetSwapChain()->GetImageFormat();
     
     CreatePipelineLayoutAndCache();
     Invalidate();

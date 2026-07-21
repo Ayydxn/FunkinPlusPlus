@@ -1,6 +1,7 @@
 ﻿#include "FunkinPCH.h"
 #include "VulkanDevice.h"
 #include "TracyVulkanAdapter.h"
+#include "VulkanContext.h"
 #include "VulkanDebugUtils.h"
 
 constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
@@ -8,7 +9,7 @@ constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-CVulkanDevice::CVulkanDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface)
+CVulkanDevice::CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
 {
     /* -- Physical Device Selection -- */
     SelectPhysicalDevice(VulkanInstance, ProbeSurface);
@@ -35,7 +36,7 @@ CVulkanDevice::CVulkanDevice(const vk::Instance& VulkanInstance, const vk::Surfa
     m_PresentQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.PresentFamily.value(), 0);
     
     /* -- Other Resources -- */
-    CreateCommandPool();
+    CreateCommandPoolAndCommandBuffers();
     InitializeTracyContext(VulkanInstance);
 }
 
@@ -50,32 +51,6 @@ void CVulkanDevice::Destroy() const
     
     m_LogicalDevice.destroyCommandPool(m_CommandPool);
     m_LogicalDevice.destroy();
-}
-
-void CVulkanDevice::RegisterWindow(uint32 WindowID, uint32 FramesInFlight)
-{
-    verifyFunkinf(!m_WindowCommandBuffers.contains(WindowID), "Attempted to register window ID {} with the Vulkan device, but it is already registered!", WindowID)
-    verifyFunkinf(FramesInFlight > 0, "Attempted to register window ID {} with 0 frames in flight!", WindowID)
-    
-    vk::CommandBufferAllocateInfo CommandBufferAllocateInfo = {};
-    CommandBufferAllocateInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
-    CommandBufferAllocateInfo.commandPool = m_CommandPool;
-    CommandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
-    CommandBufferAllocateInfo.commandBufferCount = FramesInFlight;
-    
-    std::vector<vk::CommandBuffer> CommandBuffers;
-    VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), CommandBuffers, "Failed to allocate Vulkan command buffers for window ID {}", WindowID)
-    
-    m_WindowCommandBuffers.emplace(WindowID, std::move(CommandBuffers));
-}
-
-void CVulkanDevice::UnregisterWindow(uint32 WindowID)
-{
-    const auto WindowCommandBuffersIterator = m_WindowCommandBuffers.find(WindowID);
-    verifyFunkinf(WindowCommandBuffersIterator != m_WindowCommandBuffers.end(), "Attempted to unregister window ID {} with the Vulkan device, but it was never registered!", WindowID)
-    
-    m_LogicalDevice.freeCommandBuffers(m_CommandPool, WindowCommandBuffersIterator->second);
-    m_WindowCommandBuffers.erase(WindowCommandBuffersIterator);
 }
 
 void CVulkanDevice::WaitIdle() const
@@ -113,18 +88,14 @@ vk::Result CVulkanDevice::Present(const FPresentInfo& PresentInfo) const
     return m_PresentQueue.presentKHR(VulkanPresentInfo);
 }
 
-vk::CommandBuffer CVulkanDevice::GetCommandBuffer(uint32 WindowID, uint32 FrameIndex) const
+vk::CommandBuffer CVulkanDevice::GetCommandBuffer(uint32 FrameIndex) const
 {
-    const auto WindowCommandBuffersIterator = m_WindowCommandBuffers.find(WindowID);
-    verifyFunkinf(WindowCommandBuffersIterator != m_WindowCommandBuffers.end(), "Attempted to get a command buffer for window ID {}, but it is not registered!", WindowID)
+    verifyFunkinf(FrameIndex < m_CommandBuffers.size(), "Frame index {} is out of range! (We have {} frames in flight)!", FrameIndex, m_CommandBuffers.size())
     
-    const std::vector<vk::CommandBuffer>& CommandBuffers = WindowCommandBuffersIterator->second;
-    verifyFunkinf(FrameIndex < CommandBuffers.size(), "Frame index {} is out of range for window ID {} (which has {} frames in flight)!", FrameIndex, WindowID, CommandBuffers.size())
-    
-    return CommandBuffers[FrameIndex];
+    return m_CommandBuffers[FrameIndex];
 }
 
-void CVulkanDevice::SelectPhysicalDevice(const vk::Instance& VulkanInstance, const vk::SurfaceKHR& ProbeSurface)
+void CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
 {
     const auto DeviceEnumerationResult = VulkanInstance.enumeratePhysicalDevices();
     verifyFunkinf(DeviceEnumerationResult.result == vk::Result::eSuccess, "Failed to enumerate Vulkan physical devices! ({})", vk::to_string(DeviceEnumerationResult.result))
@@ -158,7 +129,7 @@ void CVulkanDevice::SelectPhysicalDevice(const vk::Instance& VulkanInstance, con
         vk::to_string(PhysicalDeviceProperties.deviceType), SuitablePhysicalDeviceCount);
 }
 
-void CVulkanDevice::CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice)
+void CVulkanDevice::CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice)
 {
     constexpr float QueuePriority = 1.0f;
     const std::set<uint32> UniqueQueueFamilies = { m_QueueFamilyIndices.GraphicsFamily.value(), m_QueueFamilyIndices.PresentFamily.value() };
@@ -199,7 +170,7 @@ void CVulkanDevice::CreateLogicalDevice(const vk::PhysicalDevice& PhysicalDevice
     VK_CHECK_RESULT(PhysicalDevice.createDevice(DeviceCreateInfo), m_LogicalDevice, "Failed to create Vulkan logical device!")
 }
 
-void CVulkanDevice::CreateCommandPool()
+void CVulkanDevice::CreateCommandPoolAndCommandBuffers()
 {
     vk::CommandPoolCreateInfo CommandPoolCreateInfo = {};
     CommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
@@ -207,9 +178,17 @@ void CVulkanDevice::CreateCommandPool()
     CommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
     
     VK_CHECK_RESULT(m_LogicalDevice.createCommandPool(CommandPoolCreateInfo), m_CommandPool, "Failed to create Vulkan command pool!")
+    
+    vk::CommandBufferAllocateInfo CommandBufferAllocateInfo = {};
+    CommandBufferAllocateInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+    CommandBufferAllocateInfo.commandPool = m_CommandPool;
+    CommandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
+    CommandBufferAllocateInfo.commandBufferCount = CVulkanContext::DefaultFramesInFlight; // TODO: (Ayydxn) Please get rid of this and pull this from somewhere else.
+    
+    VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), m_CommandBuffers, "Failed to allocate Vulkan command buffers! (VkDevice)")
 }
 
-void CVulkanDevice::InitializeTracyContext(const vk::Instance& VulkanInstance)
+void CVulkanDevice::InitializeTracyContext(vk::Instance VulkanInstance)
 {
     #ifdef TRACY_ENABLE
         vk::CommandBufferAllocateInfo CommandBufferAllocateInfo = {};
@@ -228,7 +207,7 @@ void CVulkanDevice::InitializeTracyContext(const vk::Instance& VulkanInstance)
     #endif
 }
 
-bool CVulkanDevice::IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface)
+bool CVulkanDevice::IsPhysicalDeviceSuitable(vk::PhysicalDevice PhysicalDevice, vk::SurfaceKHR ProbeSurface)
 {
     const vk::PhysicalDeviceProperties PhysicalDeviceProperties = PhysicalDevice.getProperties();
     const bool bIsDeviceTypeAppropriate = PhysicalDeviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu || PhysicalDeviceProperties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
@@ -239,7 +218,7 @@ bool CVulkanDevice::IsPhysicalDeviceSuitable(const vk::PhysicalDevice& PhysicalD
     return bIsDeviceTypeAppropriate && bDoesPhysicalDeviceSupportRequiredExtensions && bDoesPhysicalDeviceSupportRequiredFeatures && bHasSuitableQueueFamilies;
 }
 
-bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(const vk::PhysicalDevice& PhysicalDevice)
+bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(vk::PhysicalDevice PhysicalDevice)
 {
     const auto ExtensionEnumerationResult = PhysicalDevice.enumerateDeviceExtensionProperties();
     if (ExtensionEnumerationResult.result != vk::Result::eSuccess)
@@ -257,7 +236,7 @@ bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(const vk::Physic
     return RequiredExtensions.empty();
 }
 
-bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredFeatures(const vk::PhysicalDevice& PhysicalDevice)
+bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredFeatures(vk::PhysicalDevice PhysicalDevice)
 {
     vk::PhysicalDeviceVulkan11Features PhysicalDeviceVulkan11Features = {};
     PhysicalDeviceVulkan11Features.sType = vk::StructureType::ePhysicalDeviceVulkan11Features;
@@ -271,7 +250,7 @@ bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredFeatures(const vk::Physical
     return PhysicalDeviceVulkan11Features.shaderDrawParameters == vk::True;
 }
 
-uint32 CVulkanDevice::RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevice)
+uint32 CVulkanDevice::RatePhysicalDevice(vk::PhysicalDevice PhysicalDevice)
 {
     const vk::PhysicalDeviceProperties PhysicalDeviceProperties = PhysicalDevice.getProperties();
     uint32 Score = 0;
@@ -286,7 +265,7 @@ uint32 CVulkanDevice::RatePhysicalDevice(const vk::PhysicalDevice& PhysicalDevic
     return Score;
 }
 
-FQueueFamilyIndices CVulkanDevice::FindQueueFamilies(const vk::PhysicalDevice& PhysicalDevice, const vk::SurfaceKHR& ProbeSurface)
+FQueueFamilyIndices CVulkanDevice::FindQueueFamilies(vk::PhysicalDevice PhysicalDevice, vk::SurfaceKHR ProbeSurface)
 {
     FQueueFamilyIndices QueueFamilyIndices = {};
     

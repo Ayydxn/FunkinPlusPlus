@@ -1,9 +1,8 @@
 ﻿#include "FunkinPCH.h"
 #include "VulkanUtils.h"
 
-void CVulkanUtils::TransitionImageLayout(const vk::CommandBuffer& CommandBuffer, const vk::Image& Image, vk::PipelineStageFlags2 SrcStageMask,
-    vk::PipelineStageFlags2 DstStageMask, vk::AccessFlags2 SrcAccessMask, vk::AccessFlags2 DstAccessMask, vk::ImageLayout CurrentImageLayout,
-    vk::ImageLayout NewImageLayout)
+void CVulkanUtils::TransitionImageLayout(vk::CommandBuffer CommandBuffer, vk::Image Image, vk::PipelineStageFlags2 SrcStageMask, vk::PipelineStageFlags2 DstStageMask,
+    vk::AccessFlags2 SrcAccessMask, vk::AccessFlags2 DstAccessMask, vk::ImageLayout CurrentImageLayout, vk::ImageLayout NewImageLayout)
 {
     vk::ImageAspectFlags ImageAspectMask = vk::ImageAspectFlagBits::eColor;
     if (CurrentImageLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)

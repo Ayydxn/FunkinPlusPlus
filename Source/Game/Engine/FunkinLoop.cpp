@@ -24,12 +24,11 @@ bool CFunkinLoop::Initialize()
     
     CPaths::Initialize();
     
-    const uint32 MainWindowID = m_Application.GetMainWindow().GetNativeWindowID();
-    const auto MainWindowWidth = m_Application.GetMainWindow().GetWidth();
-    const auto MainWindowHeight = m_Application.GetMainWindow().GetHeight();
-    const bool bWasVSyncRequested = m_Application.GetMainWindow().WantsVSync();
+    const auto MainWindowWidth = m_Application.GetWindow().GetWidth();
+    const auto MainWindowHeight = m_Application.GetWindow().GetHeight();
+    const bool bWasVSyncRequested = m_Application.GetWindow().WantsVSync();
     
-    if (!m_EngineContext.Initialize(ResolveRHIBackend(), MainWindowID, m_Application.GetMainWindow().GetNativeHandle(), MainWindowWidth, MainWindowHeight, bWasVSyncRequested))
+    if (!m_EngineContext.Initialize(ResolveRHIBackend(), m_Application.GetWindow().GetNativeHandle(), MainWindowWidth, MainWindowHeight, bWasVSyncRequested))
         return false;
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
@@ -70,16 +69,16 @@ void CFunkinLoop::Tick()
         {
             FUNKIN_PROFILE_SCOPE("Render")
             
-            if (m_EngineContext.GetRenderer().BeginFrame(m_Application.GetMainWindow().GetNativeWindowID()))
+            if (m_EngineContext.GetRenderer().BeginFrame())
             {
                 /* -- TEMPORARY: Triangle rendering test -- */
                 
-                m_EngineContext.GetRenderer().BindPipeline(m_Application.GetMainWindow().GetNativeWindowID(), *m_TrianglePipeline);
-                m_EngineContext.GetRenderer().Draw(m_Application.GetMainWindow().GetNativeWindowID(), 3, 1);
+                m_EngineContext.GetRenderer().BindPipeline(*m_TrianglePipeline);
+                m_EngineContext.GetRenderer().Draw(3, 1);
                 
                 /* -- TEMPORARY: Triangle rendering test -- */
                 
-                m_EngineContext.GetRenderer().EndFrame(m_Application.GetMainWindow().GetNativeWindowID());
+                m_EngineContext.GetRenderer().EndFrame();
             }
             
             m_FramePacer.OnRenderExecuted();
@@ -110,22 +109,14 @@ void CFunkinLoop::OnEvent(IEvent& Event)
     CEventDispatcher Dispatcher(Event);
     Dispatcher.Dispatch<CWindowResizeEvent>([this](const CWindowResizeEvent& WindowResizeEvent)
     {
-        m_EngineContext.GetRHIContext().OnWindowResized(WindowResizeEvent.GetSourceWindowID(), WindowResizeEvent.GetWidth(), WindowResizeEvent.GetHeight());
+        m_EngineContext.GetRHIContext().OnWindowResized(WindowResizeEvent.GetWidth(), WindowResizeEvent.GetHeight());
         
         return true;
     });
     
     Dispatcher.Dispatch<CWindowCloseEvent>([this](const CWindowCloseEvent& WindowCloseEvent)
     {
-        if (WindowCloseEvent.GetSourceWindowID() == m_Application.GetMainWindow().GetNativeWindowID())
-        {
-            bIsRunning = false;
-            return true;
-        }
-        
-        // CWindowCloseEvent should never hold a CWindow object.
-        // So, we use the window ID as a means of getting and destroying the correct window.
-        m_Application.DestroyWindowByID(WindowCloseEvent.GetSourceWindowID());
+        bIsRunning = false;
         
         return true; 
     });
@@ -173,7 +164,7 @@ double CFunkinLoop::ResolveDefaultRenderIntervalSeconds() const
     constexpr double FallbackFramerate = 240.0;
 
     // TODO: (Ayydxn) Once a config file for game settings exists, prefer a user-set max FPS from it over the display refresh rate query below.
-    const float RefreshRate = m_Application.GetMainWindow().GetDisplayRefreshRate();
+    const float RefreshRate = m_Application.GetWindow().GetDisplayRefreshRate();
     if (RefreshRate > 0.0f)
         return 1.0 / static_cast<double>(RefreshRate);
 

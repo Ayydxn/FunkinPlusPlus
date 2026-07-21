@@ -11,11 +11,11 @@ public:
     IDynamicRHI(const IDynamicRHI&) = delete;
     IDynamicRHI& operator=(const IDynamicRHI&) = delete;
     
-    virtual bool BeginFrame(uint32 WindowID) = 0;
-    virtual void EndFrame(uint32 WindowID) = 0;
+    virtual bool BeginFrame() = 0;
+    virtual void EndFrame() = 0;
     
-    virtual void BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline) = 0;
-    virtual void Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount) = 0;
+    virtual void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) = 0;
+    virtual void Draw(uint32 VertexCount, uint32 InstanceCount) = 0;
 protected:
     IDynamicRHI() = default;
 };

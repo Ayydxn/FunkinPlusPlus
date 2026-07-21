@@ -16,12 +16,8 @@ public:
     CEngineContext(const CEngineContext&) = delete;
     CEngineContext& operator=(const CEngineContext&) = delete;
     
-    bool Initialize(ERHIBackend RHIBackend, uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight,
-        bool bRequestVSync);
+    bool Initialize(ERHIBackend RHIBackend, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync);
     void Shutdown();
-    
-    bool RegisterWindow(uint32 WindowID, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWidth, uint32 InitialHeight, bool bRequestVSync) const;
-    void UnregisterWindow(uint32 WindowID) const;
     
     static CEngineContext& GetInstance();
 

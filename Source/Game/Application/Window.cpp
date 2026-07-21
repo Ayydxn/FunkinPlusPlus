@@ -146,8 +146,6 @@ bool CWindow::Initialize(const FWindowSpecification& Specification)
     m_WindowHandle = SDL_CreateWindow(Specification.Title.c_str(), static_cast<int32>(Specification.Width), static_cast<int32>(Specification.Height), WindowFlags);
     verifyFunkinf(m_WindowHandle, "Failed to create window '{}'! ({})", m_Specification.Title, SDL_GetError())
     
-    m_WindowID = SDL_GetWindowID(m_WindowHandle);
-    
     SetWindowMode(m_Specification.WindowMode);
     
     return true;
@@ -160,7 +158,6 @@ void CWindow::Destroy()
         SDL_DestroyWindow(m_WindowHandle);
         
         m_WindowHandle = nullptr;
-        m_WindowID = 0;
     }
 }
 

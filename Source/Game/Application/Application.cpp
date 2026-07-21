@@ -40,11 +40,11 @@ bool CApplication::Initialize(CEngineContext& EngineContext, const FWindowSpecif
     
     verifyFunkinf(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD), "Failed to initialize SDL3: {}", SDL_GetError())
     
-    m_MainWindow = std::make_unique<CWindow>();
-    if (!m_MainWindow->Initialize(WindowSpecification))
+    m_Window = std::make_unique<CWindow>();
+    if (!m_Window->Initialize(WindowSpecification))
         return false;
     
-    m_MainWindow->SetEventCallbackFunction([this](IEvent& Event)
+    m_Window->SetEventCallbackFunction([this](IEvent& Event)
     {
         m_EngineContext->GetEventBroadcaster().Broadcast(Event);
     });
@@ -54,8 +54,7 @@ bool CApplication::Initialize(CEngineContext& EngineContext, const FWindowSpecif
 
 void CApplication::Shutdown()
 {
-    m_SecondaryWindows.clear();
-    m_MainWindow.reset();
+    m_Window.reset();
     
     SDL_Quit();
 }
@@ -68,54 +67,12 @@ void CApplication::PumpMessages()
     while (SDL_PollEvent(&Event))
     {
         const uint64 CaptureTimestampNs = SDL_GetTicksNS();
-        const uint32 WindowID = Event.window.windowID;
         
         if (HandleGamepadEvent(Event, CaptureTimestampNs))
             continue;
         
-        if (WindowID == m_MainWindow->GetNativeWindowID())
-        {
-            m_MainWindow->HandleNativeEvent(Event, CaptureTimestampNs);
-            continue;
-        }
-        
-        if (const auto Iterator = m_SecondaryWindows.find(WindowID); Iterator != m_SecondaryWindows.end())
-            Iterator->second->HandleNativeEvent(Event, CaptureTimestampNs);
+        m_Window->HandleNativeEvent(Event, CaptureTimestampNs);
     }
-}
-
-CWindow* CApplication::MakeWindow(const FWindowSpecification& Specification)
-{
-    auto Window = std::make_unique<CWindow>();
-    if (!Window->Initialize(Specification))
-        return nullptr;
-
-    Window->SetEventCallbackFunction([this](IEvent& Event)
-    {
-        m_EngineContext->GetEventBroadcaster().Broadcast(Event);
-    });
-    
-    if (!m_EngineContext->RegisterWindow(Window->GetNativeWindowID(), Window->GetNativeHandle(), Window->GetWidth(), Window->GetHeight(), Window->WantsVSync()))
-        return nullptr;
-
-    CWindow* RawWindow = Window.get();
-    m_SecondaryWindows[Window->GetNativeWindowID()] = std::move(Window);
-
-    return RawWindow;
-}
-
-void CApplication::DestroyWindow(const CWindow* Window)
-{
-    m_EngineContext->UnregisterWindow(Window->GetNativeWindowID());
-    
-    m_SecondaryWindows.erase(Window->GetNativeWindowID());
-}
-
-void CApplication::DestroyWindowByID(uint32 WindowID)
-{
-    m_EngineContext->UnregisterWindow(WindowID);
-    
-    m_SecondaryWindows.erase(WindowID);
 }
 
 bool CApplication::HandleGamepadEvent(const SDL_Event& Event, uint64 CaptureTimestampNs) const
