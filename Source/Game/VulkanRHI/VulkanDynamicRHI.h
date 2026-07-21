@@ -11,6 +11,9 @@ public:
     
     bool BeginFrame(uint32 WindowID) override;
     void EndFrame(uint32 WindowID) override;
+    
+    void BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline) override;
+    void Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount) override;
 private:
     std::unordered_map<uint32, FAcquiredFrame> m_AcquiredFramesThisFrame;
     

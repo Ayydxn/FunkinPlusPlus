@@ -36,6 +36,8 @@ bool CFunkinLoop::Initialize()
     
     m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
     
+    m_TrianglePipeline = m_EngineContext.GetRenderer().CreateGraphicsPipeline(*m_EngineContext.GetRenderer().GetShader("TriangleTest"));
+    
     FEngineDelegates::InitializeDelegate.Broadcast();
     
     bIsRunning = true;
@@ -70,8 +72,13 @@ void CFunkinLoop::Tick()
             
             if (m_EngineContext.GetRenderer().BeginFrame(m_Application.GetMainWindow().GetNativeWindowID()))
             {
-                // TODO: (Ayydxn) Actual draw calls and render commands go here once exposed by the renderer's public API.
-            
+                /* -- TEMPORARY: Triangle rendering test -- */
+                
+                m_EngineContext.GetRenderer().BindPipeline(m_Application.GetMainWindow().GetNativeWindowID(), *m_TrianglePipeline);
+                m_EngineContext.GetRenderer().Draw(m_Application.GetMainWindow().GetNativeWindowID(), 3, 1);
+                
+                /* -- TEMPORARY: Triangle rendering test -- */
+                
                 m_EngineContext.GetRenderer().EndFrame(m_Application.GetMainWindow().GetNativeWindowID());
             }
             

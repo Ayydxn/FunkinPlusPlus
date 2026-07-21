@@ -2,6 +2,7 @@
 #include "VulkanDynamicRHI.h"
 #include "TracyVulkanAdapter.h"
 #include "VulkanDebugUtils.h"
+#include "VulkanGraphicsPipeline.h"
 #include "VulkanUtils.h"
 
 CVulkanDynamicRHI::CVulkanDynamicRHI(CVulkanContext& VulkanContext)
@@ -121,4 +122,46 @@ void CVulkanDynamicRHI::EndFrame(uint32 WindowID)
     }
     
     SwapChain->AdvanceFrame();
+}
+
+void CVulkanDynamicRHI::BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline)
+{
+    const CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
+        
+    const auto AcquiredFrameIterator = m_AcquiredFramesThisFrame.find(WindowID);
+    if (!SwapChain || !SwapChain->IsValid() || AcquiredFrameIterator == m_AcquiredFramesThisFrame.end())
+        return;
+    
+    const FAcquiredFrame AcquiredFrame = AcquiredFrameIterator->second;
+    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    
+    const auto& VulkanPipeline = dynamic_cast<const CVulkanGraphicsPipeline&>(GraphicsPipeline);
+    
+    const vk::Extent2D& SwapChainExtent = m_VulkanContext.GetSwapChain(WindowID)->GetExtent();
+    
+    vk::Viewport Viewport;
+    Viewport.x = 0.0f;
+    Viewport.y = 0.0f;
+    Viewport.width = static_cast<float>(SwapChainExtent.width);
+    Viewport.height = static_cast<float>(SwapChainExtent.height);
+    Viewport.minDepth = 0.0f;
+    Viewport.maxDepth = 1.0f;
+    
+    CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanPipeline.GetHandle());
+    CommandBuffer.setViewport(0, Viewport);
+    CommandBuffer.setScissor(0, vk::Rect2D({ 0, 0 }, SwapChainExtent));
+}
+
+void CVulkanDynamicRHI::Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount)
+{
+    const CVulkanSwapChain* SwapChain = m_VulkanContext.GetSwapChain(WindowID);
+        
+    const auto AcquiredFrameIterator = m_AcquiredFramesThisFrame.find(WindowID);
+    if (!SwapChain || !SwapChain->IsValid() || AcquiredFrameIterator == m_AcquiredFramesThisFrame.end())
+        return;
+    
+    const FAcquiredFrame AcquiredFrame = AcquiredFrameIterator->second;
+    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    
+    CommandBuffer.draw(VertexCount, InstanceCount, 0, 0);
 }

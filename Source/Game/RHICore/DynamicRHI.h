@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "RHIContext.h"
+#include "RHICore/GraphicsPipeline.h"
 
 class IDynamicRHI
 {
@@ -12,6 +13,9 @@ public:
     
     virtual bool BeginFrame(uint32 WindowID) = 0;
     virtual void EndFrame(uint32 WindowID) = 0;
+    
+    virtual void BindPipeline(uint32 WindowID, const IGraphicsPipeline& GraphicsPipeline) = 0;
+    virtual void Draw(uint32 WindowID, uint32 VertexCount, uint32 InstanceCount) = 0;
 protected:
     IDynamicRHI() = default;
 };

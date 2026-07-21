@@ -59,7 +59,7 @@ std::vector<vk::PipelineShaderStageCreateInfo> CVulkanShader::GetStageCreateInfo
         PipelineShaderStageCreateInfo.sType = vk::StructureType::ePipelineShaderStageCreateInfo;
         PipelineShaderStageCreateInfo.stage = ShaderStageFlag;
         PipelineShaderStageCreateInfo.module = ShaderModule;
-        PipelineShaderStageCreateInfo.pName = EntryPointName.c_str();
+        PipelineShaderStageCreateInfo.pName = "main";
         PipelineShaderStageCreateInfo.flags = vk::PipelineShaderStageCreateFlags();
         
         PipelineShaderStageCreateInfos.push_back(PipelineShaderStageCreateInfo);
