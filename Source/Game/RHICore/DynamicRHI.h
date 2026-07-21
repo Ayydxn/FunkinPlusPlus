@@ -10,8 +10,8 @@ public:
     IDynamicRHI(const IDynamicRHI&) = delete;
     IDynamicRHI& operator=(const IDynamicRHI&) = delete;
     
-    virtual void BeginFrame() = 0;
-    virtual void EndFrame() = 0;
+    virtual bool BeginFrame(uint32 WindowID) = 0;
+    virtual void EndFrame(uint32 WindowID) = 0;
 protected:
     IDynamicRHI() = default;
 };

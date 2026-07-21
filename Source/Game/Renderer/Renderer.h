@@ -15,8 +15,8 @@ public:
     
     void Initialize();
     
-    void BeginFrame() const;
-    void EndFrame() const;
+    bool BeginFrame(uint32 WindowID) const;
+    void EndFrame(uint32 WindowID) const;
     
     void AddShader(const std::shared_ptr<IShader>& Shader);
 

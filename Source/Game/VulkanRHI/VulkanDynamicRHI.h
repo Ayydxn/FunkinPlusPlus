@@ -9,8 +9,8 @@ public:
     explicit CVulkanDynamicRHI(CVulkanContext& VulkanContext);
     ~CVulkanDynamicRHI() override = default;
     
-    void BeginFrame() override;
-    void EndFrame() override;
+    bool BeginFrame(uint32 WindowID) override;
+    void EndFrame(uint32 WindowID) override;
 private:
     std::unordered_map<uint32, FAcquiredFrame> m_AcquiredFramesThisFrame;
     

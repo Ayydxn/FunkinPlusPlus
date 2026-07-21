@@ -16,7 +16,7 @@
 *.dll    binary
 *.lib    binary
 *.exe    binary
-*.spv    binary    ← SPIR-V compiled shaders
+*.spv    binary
 *.png    binary
 *.jpg    binary
 *.ogg    binary

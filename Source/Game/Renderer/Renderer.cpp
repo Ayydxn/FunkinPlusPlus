@@ -9,14 +9,14 @@ void CRenderer::Initialize()
     LoadShader(CPaths::GetShadersDirectory() / "TriangleTest");
 }
 
-void CRenderer::BeginFrame() const
+bool CRenderer::BeginFrame(uint32 WindowID) const
 {
-    m_DynamicRHI.BeginFrame();
+    return m_DynamicRHI.BeginFrame(WindowID);
 }
 
-void CRenderer::EndFrame() const
+void CRenderer::EndFrame(uint32 WindowID) const
 {
-    m_DynamicRHI.EndFrame();
+    m_DynamicRHI.EndFrame(WindowID);
 }
 
 void CRenderer::AddShader(const std::shared_ptr<IShader>& Shader)

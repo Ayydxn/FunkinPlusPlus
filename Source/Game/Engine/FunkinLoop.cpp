@@ -68,11 +68,12 @@ void CFunkinLoop::Tick()
         {
             FUNKIN_PROFILE_SCOPE("Render")
             
-            m_EngineContext.GetRenderer().BeginFrame();
+            if (m_EngineContext.GetRenderer().BeginFrame(m_Application.GetMainWindow().GetNativeWindowID()))
+            {
+                // TODO: (Ayydxn) Actual draw calls and render commands go here once exposed by the renderer's public API.
             
-            // TODO: (Ayydxn) Actual draw calls and render commands go here once exposed by the renderer's public API.
-            
-            m_EngineContext.GetRenderer().EndFrame();
+                m_EngineContext.GetRenderer().EndFrame(m_Application.GetMainWindow().GetNativeWindowID());
+            }
             
             m_FramePacer.OnRenderExecuted();
             
