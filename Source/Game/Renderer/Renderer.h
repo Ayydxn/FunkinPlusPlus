@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "GraphicsPipelineManager.h"
 #include "RHICore/DynamicRHI.h"
 #include "Shaders/ShaderCompiler.h"
 #include "Shaders/ShaderLibrary.h"
@@ -8,7 +9,7 @@ class CRenderer
 {
 public:
     explicit CRenderer(IDynamicRHI& DynamicRHI, ERHIBackend RHIBackend, IRHIContext& RHIContext)
-        : m_DynamicRHI(DynamicRHI), m_RHIBackend(RHIBackend), m_RHIContext(RHIContext) {}
+        : m_DynamicRHI(DynamicRHI), m_RHIBackend(RHIBackend), m_RHIContext(RHIContext), m_GraphicsPipelineManager(RHIBackend, RHIContext) {}
     
     CRenderer(const CRenderer&) = delete;
     CRenderer& operator=(const CRenderer&) = delete;
@@ -20,8 +21,6 @@ public:
     
     void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const;
     void Draw(uint32 VertexCount, uint32 InstanceCount) const;
-    
-    std::shared_ptr<IGraphicsPipeline> CreateGraphicsPipeline(const IShader& Shader) const;
     
     void AddShader(const std::shared_ptr<IShader>& Shader);
 
@@ -35,6 +34,9 @@ public:
     
     CShaderCompiler& GetShaderCompiler() { return m_ShaderCompiler; }
     const CShaderCompiler& GetShaderCompiler() const { return m_ShaderCompiler; }
+    
+    CGraphicsPipelineManager& GetGraphicsPipelineManager() { return m_GraphicsPipelineManager; }
+    const CGraphicsPipelineManager& GetGraphicsPipelineManager() const { return m_GraphicsPipelineManager; }
 
     ERHIBackend GetRHIBackend() const { return m_RHIBackend; }
     IRHIContext& GetRHIContext() const { return m_RHIContext; }
@@ -45,4 +47,5 @@ private:
     
     CShaderCompiler m_ShaderCompiler;
     CShaderLibrary m_ShaderLibrary;
+    CGraphicsPipelineManager m_GraphicsPipelineManager;
 };

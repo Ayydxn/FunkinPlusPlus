@@ -29,11 +29,6 @@ void CRenderer::Draw(uint32 VertexCount, uint32 InstanceCount) const
     m_DynamicRHI.Draw(VertexCount, InstanceCount);
 }
 
-std::shared_ptr<IGraphicsPipeline> CRenderer::CreateGraphicsPipeline(const IShader& Shader) const
-{
-    return ::CreateGraphicsPipeline(m_RHIBackend, m_RHIContext, Shader);
-}
-
 void CRenderer::AddShader(const std::shared_ptr<IShader>& Shader)
 {
     m_ShaderLibrary.Add(Shader);

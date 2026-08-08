@@ -35,7 +35,9 @@ bool CFunkinLoop::Initialize()
     
     m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
     
-    m_TrianglePipeline = m_EngineContext.GetRenderer().CreateGraphicsPipeline(*m_EngineContext.GetRenderer().GetShader("TriangleTest"));
+    m_TrianglePipeline = m_EngineContext.GetRenderer().GetGraphicsPipelineManager().GetOrCreate({
+        .Shader = m_EngineContext.GetRenderer().GetShader("TriangleTest"),
+    });
     
     FEngineDelegates::InitializeDelegate.Broadcast();
     

@@ -7,7 +7,7 @@
 class CVulkanGraphicsPipeline final : public IGraphicsPipeline
 {
 public:
-    CVulkanGraphicsPipeline(const CVulkanContext& VulkanContext, const CVulkanShader& VulkanShader);
+    CVulkanGraphicsPipeline(const CVulkanContext& VulkanContext, const FGraphicsPipelineDescription& Description);
     ~CVulkanGraphicsPipeline() override;
     
     void Invalidate() override;
@@ -18,7 +18,7 @@ private:
     void CreatePipelineLayoutAndCache();
 private:
     CVulkanDevice& m_VulkanDevice;
-    const CVulkanShader& m_VulkanShader;
+    const FGraphicsPipelineDescription& m_GraphicsPipelineDescription;
     
     vk::Format m_ColorAttachmentFormat;
     vk::PipelineLayout m_PipelineLayout;

@@ -2,8 +2,8 @@
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanDebugUtils.h"
 
-CVulkanGraphicsPipeline::CVulkanGraphicsPipeline(const CVulkanContext& VulkanContext, const CVulkanShader& VulkanShader)
-    : m_VulkanDevice(VulkanContext.GetDevice()), m_VulkanShader(VulkanShader)
+CVulkanGraphicsPipeline::CVulkanGraphicsPipeline(const CVulkanContext& VulkanContext, const FGraphicsPipelineDescription& Description)
+    : m_VulkanDevice(VulkanContext.GetDevice()), m_GraphicsPipelineDescription(Description)
 {
     m_ColorAttachmentFormat = VulkanContext.GetSwapChain()->GetImageFormat();
     
@@ -20,7 +20,16 @@ CVulkanGraphicsPipeline::~CVulkanGraphicsPipeline()
 
 void CVulkanGraphicsPipeline::Invalidate()
 {
-    const std::vector<vk::PipelineShaderStageCreateInfo> ShaderStageCreateInfos = m_VulkanShader.GetStageCreateInfos();
+    // Meant for cases where a shader gets hot reloaded, and we need to re-create the dependent graphics pipeline.
+    // TODO: (Ayydxn) Probably should also account for pipeline layouts once we get there.
+    if (m_Pipeline)
+    {
+        m_VulkanDevice.WaitIdle();
+        m_VulkanDevice.GetLogicalDevice().destroyPipeline(m_Pipeline);
+    }
+    
+    const auto VulkanShader = std::dynamic_pointer_cast<CVulkanShader>(m_GraphicsPipelineDescription.Shader);
+    const std::vector<vk::PipelineShaderStageCreateInfo> ShaderStageCreateInfos = VulkanShader->GetStageCreateInfos();
     constexpr std::array<vk::DynamicState, 2> DynamicStates =
     {
         vk::DynamicState::eViewport,

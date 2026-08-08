@@ -3,7 +3,7 @@
 #include "VulkanRHI/VulkanContext.h"
 #include "VulkanRHI/VulkanGraphicsPipeline.h"
 
-std::shared_ptr<IGraphicsPipeline> CreateGraphicsPipeline(ERHIBackend RHIBackend, IRHIContext& RHIContext, const IShader& Shader)
+std::shared_ptr<IGraphicsPipeline> CreateGraphicsPipeline(ERHIBackend RHIBackend, IRHIContext& RHIContext, const FGraphicsPipelineDescription& Description)
 {
     switch (RHIBackend)
     {
@@ -12,9 +12,8 @@ std::shared_ptr<IGraphicsPipeline> CreateGraphicsPipeline(ERHIBackend RHIBackend
         case ERHIBackend::Vulkan:
         {
             const auto& VulkanContext = dynamic_cast<CVulkanContext&>(RHIContext);
-            const auto& VulkanShader = dynamic_cast<const CVulkanShader&>(Shader);
             
-            return std::make_shared<CVulkanGraphicsPipeline>(VulkanContext, VulkanShader);
+            return std::make_shared<CVulkanGraphicsPipeline>(VulkanContext, Description);
         }
         
         case ERHIBackend::Direct3D11: verifyFunkinf(false, "Failed to create graphics pipeline! DirectX 11 isn't supported!") break;
