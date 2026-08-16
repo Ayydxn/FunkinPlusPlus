@@ -34,11 +34,7 @@ bool CFunkinLoop::Initialize()
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
     
     m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
-    
-    m_TrianglePipeline = m_EngineContext.GetRenderer().GetGraphicsPipelineManager().GetOrCreate({
-        .Shader = m_EngineContext.GetRenderer().GetShader("TriangleTest"),
-    });
-    
+
     FEngineDelegates::InitializeDelegate.Broadcast();
     
     bIsRunning = true;
@@ -71,11 +67,11 @@ void CFunkinLoop::Tick()
         {
             FUNKIN_PROFILE_SCOPE("Render")
             
-            if (m_EngineContext.GetRenderer().BeginFrame())
+            if (!bIsWindowMinimized && m_EngineContext.GetRenderer().BeginFrame())
             {
                 /* -- TEMPORARY: Triangle rendering test -- */
                 
-                m_EngineContext.GetRenderer().BindPipeline(*m_TrianglePipeline);
+                m_EngineContext.GetRenderer().BindPipeline(*m_EngineContext.GetRenderer().GetGraphicsPipelineManager().GetGraphicsPipeline("TriangleTest"));
                 m_EngineContext.GetRenderer().Draw(3, 1);
                 
                 /* -- TEMPORARY: Triangle rendering test -- */
@@ -120,6 +116,26 @@ void CFunkinLoop::OnEvent(IEvent& Event)
     Dispatcher.Dispatch<CWindowResizeEvent>([this](const CWindowResizeEvent& WindowResizeEvent)
     {
         m_EngineContext.GetRHIContext().OnWindowResized(WindowResizeEvent.GetWidth(), WindowResizeEvent.GetHeight());
+        
+        return true;
+    });
+    
+    Dispatcher.Dispatch<CWindowMinimizeEvent>([this](const CWindowMinimizeEvent& WindowMinimizeEvent)
+    {
+        bIsWindowMinimized = WindowMinimizeEvent.IsWindowMinimized();
+        
+        // When minimized, free swapchain GPU memory by tearing down swapchain resources (resize to 0,0).
+        // On restore, recreate swapchain by resizing back to the current window dimensions.
+        if (bIsWindowMinimized)
+        {
+            m_EngineContext.GetRHIContext().OnWindowResized(0, 0);
+        }
+        else
+        {
+            const uint32 CurrentWidth = m_Application.GetWindow().GetWidth();
+            const uint32 CurrentHeight = m_Application.GetWindow().GetHeight();
+            m_EngineContext.GetRHIContext().OnWindowResized(CurrentWidth, CurrentHeight);
+        }
         
         return true;
     });
