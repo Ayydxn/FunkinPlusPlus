@@ -124,18 +124,8 @@ void CFunkinLoop::OnEvent(IEvent& Event)
     {
         bIsWindowMinimized = WindowMinimizeEvent.IsWindowMinimized();
         
-        // When minimized, free swapchain GPU memory by tearing down swapchain resources (resize to 0,0).
-        // On restore, recreate swapchain by resizing back to the current window dimensions.
         if (bIsWindowMinimized)
-        {
             m_EngineContext.GetRHIContext().OnWindowResized(0, 0);
-        }
-        else
-        {
-            const uint32 CurrentWidth = m_Application.GetWindow().GetWidth();
-            const uint32 CurrentHeight = m_Application.GetWindow().GetHeight();
-            m_EngineContext.GetRHIContext().OnWindowResized(CurrentWidth, CurrentHeight);
-        }
         
         return true;
     });

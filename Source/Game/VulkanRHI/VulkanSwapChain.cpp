@@ -110,6 +110,8 @@ void CVulkanSwapChain::DestroySwapChainAndDependents()
     if (!m_SwapChain)
         return;
     
+    VK_CHECK_RESULT_VOID(m_LogicalDevice.waitIdle(), "Failed to wait for the Vulkan logical device to idle before destroying the swapchain and its dependents!")
+    
     for (const vk::Semaphore& RenderFinishedSemaphore : m_RenderFinishedSemaphores)
         m_LogicalDevice.destroySemaphore(RenderFinishedSemaphore);
     

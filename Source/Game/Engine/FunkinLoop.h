@@ -28,11 +28,6 @@ private:
 
     CEventBroadcaster::FListenerHandle m_ListenerHandle = 0;
     
-    /* -- TEMPORARY: Triangle rendering test -- */
-    
-    std::shared_ptr<IGraphicsPipeline> m_TrianglePipeline;
-
-    /* -- TEMPORARY: Triangle rendering test -- */
-    
+    bool bIsWindowMinimized = false;
     bool bIsRunning = false;
 };

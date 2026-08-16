@@ -2,7 +2,7 @@
 #include "GraphicsPipelineManager.h"
 #include "Logging/Logging.h"
 
-const std::shared_ptr<IGraphicsPipeline>& CGraphicsPipelineManager::GetOrCreate(const FGraphicsPipelineDescription& GraphicsPipelineDescription)
+const std::shared_ptr<IGraphicsPipeline>& CGraphicsPipelineManager::GetOrCreate(const std::string& Name, const FGraphicsPipelineDescription& GraphicsPipelineDescription)
 {
     const size_t GraphicsPipelineDescriptionHash = std::hash<FGraphicsPipelineDescription>()(GraphicsPipelineDescription);
     
@@ -26,6 +26,8 @@ const std::shared_ptr<IGraphicsPipeline>& CGraphicsPipelineManager::GetOrCreate(
         const auto InsertedIterator = m_Pipelines.insert_or_assign(GraphicsPipelineDescriptionHash, std::make_pair(GraphicsPipelineDescription,
             std::move(NewGraphicsPipeline))).first;
         
+        m_NameToDescriptionHash.insert_or_assign(Name, GraphicsPipelineDescriptionHash);
+        
         return InsertedIterator->second.second;
     }
     
@@ -33,5 +35,20 @@ const std::shared_ptr<IGraphicsPipeline>& CGraphicsPipelineManager::GetOrCreate(
     const auto [InsertedIterator, bWasInserted] = m_Pipelines.emplace(GraphicsPipelineDescriptionHash, std::make_pair(GraphicsPipelineDescription,
         std::move(NewGraphicsPipeline)));
     
+    m_NameToDescriptionHash.insert_or_assign(Name, GraphicsPipelineDescriptionHash);
+    
     return InsertedIterator->second.second;
+}
+
+const std::shared_ptr<IGraphicsPipeline>& CGraphicsPipelineManager::GetGraphicsPipeline(const std::string& Name)
+{
+    verifyFunkinf(m_NameToDescriptionHash.contains(Name), "Graphics pipeline '{}' wasn't found in the graphics pipeline manager!", Name)
+    
+    const size_t DescriptionHash = m_NameToDescriptionHash.at(Name);
+    
+    // (Ayydxn) This triggering means that somehow our two maps ended up desyncing meaning something inside of this class is bugged. 
+    verifyFunkinf(m_Pipelines.contains(DescriptionHash), "Graphics pipeline '{}' resolved to a description hash with no matching pipeline! (Manager state is desynced)",
+        Name)
+    
+    return m_Pipelines.at(DescriptionHash).second;
 }

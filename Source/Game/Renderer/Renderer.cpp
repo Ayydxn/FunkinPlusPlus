@@ -7,6 +7,10 @@ void CRenderer::Initialize()
     m_ShaderCompiler.Initialize(m_RHIBackend);
     
     LoadShader(CPaths::GetShadersDirectory() / "TriangleTest");
+    
+    m_GraphicsPipelineManager.GetOrCreate("TriangleTest", {
+        .Shader = GetShader("TriangleTest")
+    });
 }
 
 bool CRenderer::BeginFrame() const
