@@ -22,6 +22,8 @@ public:
     void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const;
     void Draw(uint32 VertexCount, uint32 InstanceCount) const;
     
+    void* GetCurrentCommandBuffer() const { return m_DynamicRHI.GetCurrentCommandBuffer(); }
+    
     void AddShader(const std::shared_ptr<IShader>& Shader);
 
     void LoadShader(const std::filesystem::path& Filepath);

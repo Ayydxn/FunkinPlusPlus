@@ -17,6 +17,7 @@ public:
     
     void OnWindowResized(uint32 NewWidth, uint32 NewHeight) override;
     
+    vk::Instance GetInstance() const { return m_Instance; }
     CVulkanDevice& GetDevice() const { return *m_Device; }
     std::shared_ptr<CVulkanSwapChain> GetSwapChain() const { return m_SwapChain; }
 public:

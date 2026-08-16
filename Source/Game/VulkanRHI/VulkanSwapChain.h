@@ -32,6 +32,8 @@ public:
     
     vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const { return m_VulkanDevice.GetCommandBuffer(FrameIndex); }
     vk::Image GetImage(uint32 ImageIndex) const { return m_SwapChainImages[ImageIndex]; }
+    uint32 GetImageCount() const { return static_cast<uint32>(m_SwapChainImages.size()); }
+    uint32 GetMinImageCount() const { return m_MinimumImageCount; }
     vk::ImageView GetImageView(uint32 ImageIndex) const { return m_SwapChainImageViews[ImageIndex]; }
     vk::Semaphore GetRenderFinishedSemaphore(uint32 ImageIndex) const { return m_RenderFinishedSemaphores[ImageIndex]; }
     vk::Semaphore GetImageAvailableSemaphore(uint32 FrameIndex) const { return m_FrameSyncObjects[FrameIndex].ImageAvailableSemaphore; }
@@ -69,6 +71,7 @@ private:
     
     uint32 m_FramesInFlight = 0;
     uint32 m_CurrentFrameIndex = 0;
+    uint32 m_MinimumImageCount = 0;
     
     bool bRequestVSync;
 };

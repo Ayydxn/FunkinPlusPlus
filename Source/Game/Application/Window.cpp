@@ -4,6 +4,7 @@
 #include "Events/MouseEvents.h"
 #include "Events/WindowEvents.h"
 
+#include <backends/imgui_impl_sdl3.h>
 #include <SDL3/SDL.h>
 
 namespace
@@ -165,6 +166,8 @@ void CWindow::HandleNativeEvent(const SDL_Event& NativeEvent, uint64 CaptureTime
 {
     if (!m_WindowState.EventCallbackFunction)
         return;
+    
+    ImGui_ImplSDL3_ProcessEvent(&NativeEvent);
     
     switch (NativeEvent.type)
     {
@@ -368,6 +371,7 @@ float CWindow::GetDisplayRefreshRate() const
 FNativeWindowHandle CWindow::GetNativeHandle() const
 {
     FNativeWindowHandle NativeWindowHandle;
+    NativeWindowHandle.SDLWindow = m_WindowHandle;
     
     #ifdef FUNKIN_PLATFORM_WIN64
         const SDL_PropertiesID WindowProperties = SDL_GetWindowProperties(m_WindowHandle);

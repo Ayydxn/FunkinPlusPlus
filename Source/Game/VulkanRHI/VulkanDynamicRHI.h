@@ -14,6 +14,8 @@ public:
     
     void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) override;
     void Draw(uint32 VertexCount, uint32 InstanceCount) override;
+    
+    void* GetCurrentCommandBuffer() const override;
 private:
     std::optional<FAcquiredFrame> m_CurrentlyAcquiredFrame = std::nullopt;
     

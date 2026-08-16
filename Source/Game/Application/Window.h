@@ -5,6 +5,9 @@
 #include <string>
 #include <utility>
 
+struct SDL_Window;
+union SDL_Event;
+
 enum class EWindowMode : uint8
 {
     Windowed,
@@ -39,10 +42,9 @@ struct FNativeWindowHandle
         struct { unsigned long Window; void* Display; } X11;
         struct { void* Surface; void* Display; } Wayland;
     };
+    
+    SDL_Window* SDLWindow = nullptr;
 };
-
-struct SDL_Window;
-union SDL_Event;
 
 class CWindow
 {

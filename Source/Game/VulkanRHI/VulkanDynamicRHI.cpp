@@ -44,7 +44,7 @@ bool CVulkanDynamicRHI::BeginFrame()
         vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
     
     vk::ClearColorValue ClearColorValue;
-    ClearColorValue.float32 = std::array<float, 4> { 0.05f, 0.05f, 0.05f, 1.0f };
+    ClearColorValue.float32 = std::array<float, 4> { 0.25f, 0.25f, 0.25f, 1.0f };
     
     vk::RenderingAttachmentInfo ColorAttachmentInfo = {};
     ColorAttachmentInfo.sType = vk::StructureType::eRenderingAttachmentInfo;
@@ -162,4 +162,15 @@ void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     
     CommandBuffer.draw(VertexCount, InstanceCount, 0, 0);
+}
+
+void* CVulkanDynamicRHI::GetCurrentCommandBuffer() const
+{
+    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
+    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+        return nullptr;
+    
+    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
+    
+    return static_cast<VkCommandBuffer>(SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex));
 }

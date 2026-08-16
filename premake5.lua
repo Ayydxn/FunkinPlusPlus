@@ -125,4 +125,5 @@ group ""
 
 group "Dependencies"
     include "Source/ThirdParty/tracy"
+    include "Source/ThirdParty/ImGui"
 group ""

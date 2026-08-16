@@ -16,6 +16,8 @@ public:
     
     virtual void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) = 0;
     virtual void Draw(uint32 VertexCount, uint32 InstanceCount) = 0;
+    
+    virtual void* GetCurrentCommandBuffer() const = 0;
 protected:
     IDynamicRHI() = default;
 };

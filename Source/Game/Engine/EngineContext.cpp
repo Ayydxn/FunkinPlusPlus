@@ -16,12 +16,18 @@ bool CEngineContext::Initialize(ERHIBackend RHIBackend, const FNativeWindowHandl
     m_Renderer = std::make_unique<CRenderer>(*m_DynamicRHI, RHIBackend, *m_RHIContext);
     m_Renderer->Initialize();
     
+    m_ImGuiRenderer = CreateImGuiRenderer(RHIBackend, *m_RHIContext);
+    m_ImGuiRenderer->Initialize(NativeWindowHandle);
+    
     return true;
 }
 
 void CEngineContext::Shutdown()
 {
     m_Instance = nullptr;
+    
+    m_ImGuiRenderer->Shutdown();
+    delete m_ImGuiRenderer;
     
     m_Renderer.reset();
     m_DynamicRHI.reset();

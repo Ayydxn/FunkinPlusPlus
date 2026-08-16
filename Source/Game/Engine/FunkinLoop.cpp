@@ -80,6 +80,14 @@ void CFunkinLoop::Tick()
                 
                 /* -- TEMPORARY: Triangle rendering test -- */
                 
+                /* -- Render ImGui -- */
+                
+                m_EngineContext.GetImGuiRenderer().BeginFrame();
+                
+                m_EngineContext.GetImGuiRenderer().EndFrame(m_EngineContext.GetRenderer().GetCurrentCommandBuffer());
+                
+                /*--------------------*/
+                
                 m_EngineContext.GetRenderer().EndFrame();
             }
             

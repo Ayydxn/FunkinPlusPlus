@@ -149,6 +149,8 @@ void CVulkanSwapChain::CreateSwapChain(const vk::Extent2D& RequestedSize, vk::Sw
         ChosenExtent.height = std::clamp(RequestedSize.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
     }
     
+    m_MinimumImageCount = SurfaceCapabilities.minImageCount;
+    
     uint32 RequestedImageCount = SurfaceCapabilities.minImageCount + 1;
     if (SurfaceCapabilities.maxImageCount > 0 && RequestedImageCount > SurfaceCapabilities.maxImageCount)
         RequestedImageCount = SurfaceCapabilities.maxImageCount;
@@ -274,8 +276,9 @@ void CVulkanSwapChain::SelectImageFormatAndColorSpace(vk::Format& OutImageFormat
     bool bFoundPreferredFormat = false;
     for (const vk::SurfaceFormatKHR& SurfaceFormat : SurfaceFormats)
     {
-        // If we find VK_FORMAT_B8G8R8A8_SRGB, we use that and its associated color space.
-        if (SurfaceFormat.format == vk::Format::eB8G8R8A8Srgb && SurfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+        // Prefer standard UNORM formats primarily to avoid double gamma correction issues with something like ImGui.
+        if ((SurfaceFormat.format == vk::Format::eB8G8R8A8Unorm || SurfaceFormat.format == vk::Format::eR8G8B8A8Unorm) &&
+            SurfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
         {
             OutImageFormat = SurfaceFormat.format;
             OutColorSpace = SurfaceFormat.colorSpace;
@@ -284,7 +287,7 @@ void CVulkanSwapChain::SelectImageFormatAndColorSpace(vk::Format& OutImageFormat
         }
     }
     
-    // If we failed to find VK_FORMAT_B8G8R8A8_SRGB, fall back to the format/color space of the first available surface format.
+    // If we failed to find a standard UNORM format, fall back to the format/color space of the first available surface format.
     if (!bFoundPreferredFormat)
     {
         OutImageFormat = SurfaceFormats[0].format;

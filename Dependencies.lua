@@ -259,4 +259,10 @@ Register("Slang", {
     }
 })
 
+Register("ImGui", {
+    IncludePaths = { ThirdPartyFolder .. "ImGui" },
+    
+    Links = { "ImGui" }
+})
+
 ListDependencies()

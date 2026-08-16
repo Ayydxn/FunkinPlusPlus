@@ -6,6 +6,7 @@
 #include "Input/InputState.h"
 #include "Renderer/Renderer.h"
 #include "RHICore/DynamicRHI.h"
+#include "RHICore/ImGuiRenderer.h"
 #include "RHICore/RHIContext.h"
 
 class CEngineContext
@@ -23,6 +24,7 @@ public:
 
     IRHIContext& GetRHIContext() const { return *m_RHIContext; }
     CRenderer& GetRenderer() const { return *m_Renderer; }
+    IImGuiRenderer& GetImGuiRenderer() const { return *m_ImGuiRenderer; }
     CEventBroadcaster& GetEventBroadcaster() { return m_EventBroadcaster; }
     CInputState& GetInputState() { return m_InputState; }
     const FFrameStats& GetFrameStats() const { return m_FrameStats; }
@@ -34,6 +36,7 @@ private:
     std::unique_ptr<IRHIContext> m_RHIContext;
     std::unique_ptr<IDynamicRHI> m_DynamicRHI;
     std::unique_ptr<CRenderer> m_Renderer;
+    IImGuiRenderer* m_ImGuiRenderer;
     
     CEventBroadcaster m_EventBroadcaster;
     CInputState m_InputState;
