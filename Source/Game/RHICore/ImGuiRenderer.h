@@ -1,4 +1,6 @@
 #pragma once
+
+#include "CommandBuffer.h"
 #include "RHIContext.h"
 
 class IImGuiRenderer
@@ -13,7 +15,7 @@ public:
     virtual void Shutdown() = 0;
     
     virtual void BeginFrame() = 0;
-    virtual void EndFrame(void* CommandBuffer) = 0; // TODO: (Ayydxn) Introduce a concrete RHICore command buffer type.
+    virtual void EndFrame(ICommandBuffer* CommandBuffer) = 0;
 protected:
     IImGuiRenderer() = default;
 };

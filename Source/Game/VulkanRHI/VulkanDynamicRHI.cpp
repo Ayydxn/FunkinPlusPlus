@@ -30,7 +30,7 @@ bool CVulkanDynamicRHI::BeginFrame()
     
     m_CurrentlyAcquiredFrame = AcquiredFrame;
     
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = GetCurrentVulkanCommandBuffer()->GetHandle();
     VK_CHECK_RESULT_VOID(CommandBuffer.reset(), "Failed to reset the Vulkan command buffer!")
     
     vk::CommandBufferBeginInfo CommandBufferBeginInfo = {};
@@ -96,13 +96,14 @@ bool CVulkanDynamicRHI::BeginFrame()
 
 void CVulkanDynamicRHI::EndFrame()
 {
-    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
-    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
         return;
     
+    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
     const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
     
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
     CommandBuffer.endRendering();
     
     const vk::Image AcquiredImage = SwapChain->GetImage(AcquiredFrame.ImageIndex);
@@ -150,12 +151,11 @@ void CVulkanDynamicRHI::EndFrame()
 
 void CVulkanDynamicRHI::BindVertexBuffer(const IVertexBuffer& VertexBuffer)
 {
-    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
-    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
         return;
     
-    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
     const vk::Buffer VulkanVertexBuffer = dynamic_cast<const CVulkanVertexBuffer&>(VertexBuffer).GetHandle();
     constexpr vk::DeviceSize Offsets = 0;
     
@@ -166,12 +166,11 @@ void CVulkanDynamicRHI::BindVertexBuffer(const IVertexBuffer& VertexBuffer)
 
 void CVulkanDynamicRHI::BindIndexBuffer(const IIndexBuffer& IndexBuffer)
 {
-    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
-    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
         return;
     
-    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
     const vk::Buffer VulkanIndexBuffer = dynamic_cast<const CVulkanIndexBuffer&>(IndexBuffer).GetHandle();
     
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
@@ -181,12 +180,11 @@ void CVulkanDynamicRHI::BindIndexBuffer(const IIndexBuffer& IndexBuffer)
 
 void CVulkanDynamicRHI::BindPipeline(const IGraphicsPipeline& GraphicsPipeline)
 {
-    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
-    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
         return;
     
-    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
     
     const auto& VulkanPipeline = dynamic_cast<const CVulkanGraphicsPipeline&>(GraphicsPipeline);
     
@@ -209,12 +207,11 @@ void CVulkanDynamicRHI::BindPipeline(const IGraphicsPipeline& GraphicsPipeline)
 
 void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)
 {
-    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
-    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
         return;
     
-    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
     
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     
@@ -223,19 +220,23 @@ void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)
 
 void CVulkanDynamicRHI::DrawIndexed(uint32 IndexCount, uint32 InstanceCount)
 {
-    const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
-    if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
         return;
     
-    const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
-    const vk::CommandBuffer CommandBuffer = SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex);
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
     
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     
     CommandBuffer.drawIndexed(IndexCount, InstanceCount, 0, 0, 0);
 }
 
-void* CVulkanDynamicRHI::GetCurrentCommandBuffer() const
+ICommandBuffer* CVulkanDynamicRHI::GetCurrentCommandBuffer() const
+{
+    return GetCurrentVulkanCommandBuffer();
+}
+
+CVulkanCommandBuffer* CVulkanDynamicRHI::GetCurrentVulkanCommandBuffer() const
 {
     const std::shared_ptr<CVulkanSwapChain> SwapChain = m_VulkanContext.GetSwapChain();
     if (!SwapChain || !SwapChain->IsValid() || !m_CurrentlyAcquiredFrame.has_value())
@@ -243,5 +244,7 @@ void* CVulkanDynamicRHI::GetCurrentCommandBuffer() const
     
     const FAcquiredFrame AcquiredFrame = m_CurrentlyAcquiredFrame.value();
     
-    return static_cast<VkCommandBuffer>(SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex));
+    m_CurrentCommandBuffer.emplace(SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex));
+    
+    return &m_CurrentCommandBuffer.value();
 }

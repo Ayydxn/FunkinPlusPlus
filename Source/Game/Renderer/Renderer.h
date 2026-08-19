@@ -26,7 +26,7 @@ public:
     void Draw(uint32 VertexCount, uint32 InstanceCount) const;
     void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) const;
     
-    void* GetCurrentCommandBuffer() const { return m_DynamicRHI.GetCurrentCommandBuffer(); }
+    ICommandBuffer* GetCurrentCommandBuffer() const { return m_DynamicRHI.GetCurrentCommandBuffer(); }
     
     void AddShader(const std::shared_ptr<IShader>& Shader);
 

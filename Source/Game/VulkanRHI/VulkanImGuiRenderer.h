@@ -13,7 +13,7 @@ public:
     void Shutdown() override;
     
     void BeginFrame() override;
-    void EndFrame(void* CommandBuffer) override;
+    void EndFrame(ICommandBuffer* CommandBuffer) override;
 private:
     void CreateDescriptorPool();
 private:

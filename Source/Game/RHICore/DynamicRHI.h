@@ -2,6 +2,7 @@
 
 #include "IndexBuffer.h"
 #include "RHIContext.h"
+#include "RHICore/CommandBuffer.h"
 #include "RHICore/GraphicsPipeline.h"
 
 class IDynamicRHI
@@ -22,7 +23,7 @@ public:
     virtual void Draw(uint32 VertexCount, uint32 InstanceCount) = 0;
     virtual void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) = 0;
     
-    virtual void* GetCurrentCommandBuffer() const = 0;
+    virtual ICommandBuffer* GetCurrentCommandBuffer() const = 0;
 protected:
     IDynamicRHI() = default;
 };

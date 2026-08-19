@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "RHICore/DynamicRHI.h"
 
@@ -19,9 +20,12 @@ public:
     void Draw(uint32 VertexCount, uint32 InstanceCount) override;
     void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) override;
     
-    void* GetCurrentCommandBuffer() const override;
+    ICommandBuffer* GetCurrentCommandBuffer() const override;
+private:
+    CVulkanCommandBuffer* GetCurrentVulkanCommandBuffer() const;
 private:
     std::optional<FAcquiredFrame> m_CurrentlyAcquiredFrame = std::nullopt;
+    mutable std::optional<CVulkanCommandBuffer> m_CurrentCommandBuffer = std::nullopt;
     
     CVulkanContext& m_VulkanContext;
 };

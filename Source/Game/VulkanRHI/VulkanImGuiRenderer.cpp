@@ -1,5 +1,6 @@
 #include "FunkinPCH.h"
 #include "VulkanImGuiRenderer.h"
+#include "VulkanCommandBuffer.h"
 #include "VulkanDebugUtils.h"
 #include "ImGui/ImGuiCommon.h"
 
@@ -71,14 +72,14 @@ void CVulkanImGuiRenderer::BeginFrame()
     ImGui::NewFrame();
 }
 
-void CVulkanImGuiRenderer::EndFrame(void* CommandBuffer)
+void CVulkanImGuiRenderer::EndFrame(ICommandBuffer* CommandBuffer)
 {
     ImGui::Render();
     
     if (ImDrawData* DrawData = ImGui::GetDrawData())
     {
         if (DrawData->DisplaySize.x > 0.0f || DrawData->DisplaySize.y > 0.0f)
-            ImGui_ImplVulkan_RenderDrawData(DrawData, static_cast<VkCommandBuffer>(CommandBuffer));
+            ImGui_ImplVulkan_RenderDrawData(DrawData, dynamic_cast<CVulkanCommandBuffer*>(CommandBuffer)->GetHandle());
     }
     
     ImGuiIO& ImGuiConfig = ImGui::GetIO();
