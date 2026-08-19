@@ -5,7 +5,10 @@ void CVulkanUtils::TransitionImageLayout(vk::CommandBuffer CommandBuffer, vk::Im
     vk::AccessFlags2 SrcAccessMask, vk::AccessFlags2 DstAccessMask, vk::ImageLayout CurrentImageLayout, vk::ImageLayout NewImageLayout)
 {
     vk::ImageAspectFlags ImageAspectMask = vk::ImageAspectFlagBits::eColor;
-    if (CurrentImageLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
+    if (NewImageLayout == vk::ImageLayout::eDepthAttachmentOptimal)
+        ImageAspectMask = vk::ImageAspectFlagBits::eDepth;
+    
+    if (NewImageLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
         ImageAspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
     
     vk::ImageSubresourceRange ImageSubresourceRange;
@@ -34,4 +37,15 @@ void CVulkanUtils::TransitionImageLayout(vk::CommandBuffer CommandBuffer, vk::Im
     DependencyInfo.pImageMemoryBarriers = &ImageMemoryBarrier;
     
     CommandBuffer.pipelineBarrier2(DependencyInfo);
+}
+
+bool CVulkanUtils::DoesFormatHaveStencilComponent(vk::Format Format)
+{
+    constexpr std::array<vk::Format, 2> StencilFormats
+    {
+        vk::Format::eD32SfloatS8Uint,
+        vk::Format::eD24UnormS8Uint
+    };
+    
+    return std::ranges::find(StencilFormats, Format) != StencilFormats.end();
 }

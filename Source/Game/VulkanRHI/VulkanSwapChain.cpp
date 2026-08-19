@@ -2,10 +2,11 @@
 #include "VulkanSwapChain.h"
 #include "VulkanDebugUtils.h"
 #include "VulkanPlatformUtils.h"
+#include "VulkanUtils.h"
 
-CVulkanSwapChain::CVulkanSwapChain(CVulkanDevice& VulkanDevice, vk::Instance VulkanInstance, const FNativeWindowHandle& NativeWindowHandle, const vk::Extent2D& InitialSize,
-    uint32 FramesInFlight, bool bRequestVSync)
-        : m_VulkanDevice(VulkanDevice), m_FramesInFlight(FramesInFlight), bRequestVSync(bRequestVSync)
+CVulkanSwapChain::CVulkanSwapChain(CVulkanDevice& VulkanDevice, CVulkanMemoryAllocator& MemoryAllocator, vk::Instance VulkanInstance,
+                                   const FNativeWindowHandle& NativeWindowHandle, const vk::Extent2D& InitialSize, uint32 FramesInFlight, bool bRequestVSync)
+        : m_VulkanDevice(VulkanDevice), m_MemoryAllocator(MemoryAllocator), m_FramesInFlight(FramesInFlight), bRequestVSync(bRequestVSync)
 {
     m_PhysicalDevice = VulkanDevice.GetPhysicalDevice();
     m_LogicalDevice = VulkanDevice.GetLogicalDevice();
@@ -103,6 +104,7 @@ void CVulkanSwapChain::CreateSwapChainAndDependents(const vk::Extent2D& Requeste
     CreateSwapChain(RequestedSize, OldSwapchain);
     CreateImageViews();
     CreateRenderFinishedSemaphores();
+    CreateDepthResources();
 }
 
 void CVulkanSwapChain::DestroySwapChainAndDependents()
@@ -111,6 +113,8 @@ void CVulkanSwapChain::DestroySwapChainAndDependents()
         return;
     
     VK_CHECK_RESULT_VOID(m_LogicalDevice.waitIdle(), "Failed to wait for the Vulkan logical device to idle before destroying the swapchain and its dependents!")
+    
+    DestroyDepthResources();
     
     for (const vk::Semaphore& RenderFinishedSemaphore : m_RenderFinishedSemaphores)
         m_LogicalDevice.destroySemaphore(RenderFinishedSemaphore);
@@ -266,6 +270,61 @@ void CVulkanSwapChain::DestroyFrameSyncObjects()
     }
     
     m_FrameSyncObjects.clear();
+}
+
+void CVulkanSwapChain::CreateDepthResources()
+{
+    const auto [Format, bHasStencilComponent] = m_VulkanDevice.GetDepthFormatInfo();
+    
+    // Create depth image
+    vk::ImageCreateInfo ImageCreateInfo = {};
+    ImageCreateInfo.sType = vk::StructureType::eImageCreateInfo;
+    ImageCreateInfo.imageType = vk::ImageType::e2D;
+    ImageCreateInfo.format = Format;
+    ImageCreateInfo.extent = vk::Extent3D(m_SwapChainExtent.width, m_SwapChainExtent.height, 1);
+    ImageCreateInfo.mipLevels = 1;
+    ImageCreateInfo.arrayLayers = 1;
+    ImageCreateInfo.samples = vk::SampleCountFlagBits::e1;
+    ImageCreateInfo.tiling = vk::ImageTiling::eOptimal;
+    ImageCreateInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+    ImageCreateInfo.sharingMode = vk::SharingMode::eExclusive;
+    ImageCreateInfo.initialLayout = vk::ImageLayout::eUndefined;
+    
+    m_DepthImage = m_MemoryAllocator.AllocateImage(ImageCreateInfo, vma::MemoryUsage::eAutoPreferDevice);
+    
+    // Create depth image view
+    vk::ImageSubresourceRange ImageSubresourceRange;
+    ImageSubresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+    
+    if (bHasStencilComponent)
+        ImageSubresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+    
+    ImageSubresourceRange.baseMipLevel = 0;
+    ImageSubresourceRange.levelCount = 1;
+    ImageSubresourceRange.baseArrayLayer = 0;
+    ImageSubresourceRange.layerCount = 1;
+    
+    vk::ImageViewCreateInfo ImageViewCreateInfo = {};
+    ImageViewCreateInfo.sType = vk::StructureType::eImageViewCreateInfo;
+    ImageViewCreateInfo.image = m_DepthImage.Image;
+    ImageViewCreateInfo.viewType = vk::ImageViewType::e2D;
+    ImageViewCreateInfo.format = Format;
+    ImageViewCreateInfo.components = vk::ComponentMapping();
+    ImageViewCreateInfo.subresourceRange = ImageSubresourceRange;
+    
+    VK_CHECK_RESULT(m_LogicalDevice.createImageView(ImageViewCreateInfo), m_DepthImageView, "Failed to create Vulkan depth image view!")
+}
+
+void CVulkanSwapChain::DestroyDepthResources()
+{
+    if (!m_DepthImage.Image)
+        return;
+    
+    m_LogicalDevice.destroyImageView(m_DepthImageView);
+    m_MemoryAllocator.DestroyImage(m_DepthImage);
+    
+    m_DepthImageView = VK_NULL_HANDLE;
+    m_DepthImage = {};
 }
 
 void CVulkanSwapChain::SelectImageFormatAndColorSpace(vk::Format& OutImageFormat, vk::ColorSpaceKHR& OutColorSpace) const

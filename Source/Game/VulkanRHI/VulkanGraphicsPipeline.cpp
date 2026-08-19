@@ -1,6 +1,7 @@
 #include "FunkinPCH.h"
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanDebugUtils.h"
+#include "VulkanUtils.h"
 
 namespace
 {
@@ -57,6 +58,7 @@ void CVulkanGraphicsPipeline::Invalidate()
     }
     
     const auto VulkanShader = std::dynamic_pointer_cast<CVulkanShader>(m_GraphicsPipelineDescription.Shader);
+    const auto [Format, bHasStencilComponent] = m_VulkanDevice.GetDepthFormatInfo();
     const std::vector<vk::PipelineShaderStageCreateInfo> ShaderStageCreateInfos = VulkanShader->GetStageCreateInfos();
     constexpr std::array<vk::DynamicState, 2> DynamicStates =
     {
@@ -124,7 +126,15 @@ void CVulkanGraphicsPipeline::Invalidate()
     MultisampleStateCreateInfo.sType = vk::StructureType::ePipelineMultisampleStateCreateInfo;
     MultisampleStateCreateInfo.sampleShadingEnable = vk::False;
     MultisampleStateCreateInfo.rasterizationSamples = vk::SampleCountFlagBits::e1;
-
+    
+    vk::PipelineDepthStencilStateCreateInfo DepthStencilStateCreateInfo = {};
+    DepthStencilStateCreateInfo.sType = vk::StructureType::ePipelineDepthStencilStateCreateInfo;
+    DepthStencilStateCreateInfo.depthTestEnable = true;
+    DepthStencilStateCreateInfo.depthWriteEnable = true;
+    DepthStencilStateCreateInfo.depthCompareOp = vk::CompareOp::eLess;
+    DepthStencilStateCreateInfo.depthBoundsTestEnable = false;
+    DepthStencilStateCreateInfo.stencilTestEnable = false;
+    
     vk::PipelineColorBlendAttachmentState ColorBlendAttachmentState = {};
     ColorBlendAttachmentState.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
         vk::ColorComponentFlagBits::eA;
@@ -142,8 +152,10 @@ void CVulkanGraphicsPipeline::Invalidate()
     PipelineRenderingCreateInfo.sType = vk::StructureType::ePipelineRenderingCreateInfo;
     PipelineRenderingCreateInfo.colorAttachmentCount = 1;
     PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_ColorAttachmentFormat;
-    PipelineRenderingCreateInfo.depthAttachmentFormat = vk::Format::eUndefined;
-    PipelineRenderingCreateInfo.stencilAttachmentFormat = vk::Format::eUndefined;
+    PipelineRenderingCreateInfo.depthAttachmentFormat = Format;
+    
+    if (bHasStencilComponent)
+        PipelineRenderingCreateInfo.stencilAttachmentFormat = Format;
     
     vk::GraphicsPipelineCreateInfo GraphicsPipelineCreateInfo = {};
     GraphicsPipelineCreateInfo.sType = vk::StructureType::eGraphicsPipelineCreateInfo;
@@ -154,7 +166,7 @@ void CVulkanGraphicsPipeline::Invalidate()
     GraphicsPipelineCreateInfo.pViewportState = &ViewportStateCreateInfo;
     GraphicsPipelineCreateInfo.pRasterizationState = &RasterizationStateCreateInfo;
     GraphicsPipelineCreateInfo.pMultisampleState = &MultisampleStateCreateInfo;
-    GraphicsPipelineCreateInfo.pDepthStencilState = nullptr;
+    GraphicsPipelineCreateInfo.pDepthStencilState = &DepthStencilStateCreateInfo;
     GraphicsPipelineCreateInfo.pColorBlendState = &ColorBlendStateCreateInfo;
     GraphicsPipelineCreateInfo.pDynamicState = &DynamicStateCreateInfo;
     GraphicsPipelineCreateInfo.layout = m_PipelineLayout;

@@ -123,7 +123,8 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, u
     m_MemoryAllocator->Initialize(m_Instance, m_Device->GetPhysicalDevice(), m_Device->GetLogicalDevice());
     
     const vk::Extent2D InitialExtent(InitialWindowWidth, InitialWindowHeight);
-    m_SwapChain = std::make_unique<CVulkanSwapChain>(*m_Device, m_Instance, NativeWindowHandle, InitialExtent, DefaultFramesInFlight, bRequestVSync);
+    m_SwapChain = std::make_unique<CVulkanSwapChain>(*m_Device, *m_MemoryAllocator, m_Instance, NativeWindowHandle, InitialExtent, DefaultFramesInFlight,
+        bRequestVSync);
     
     return true;
 }

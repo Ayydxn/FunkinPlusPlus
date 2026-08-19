@@ -12,6 +12,12 @@ struct FVulkanDeviceInfo
     std::string VulkanAPIVersion;
 };
 
+struct FVulkanDepthFormatInfo
+{
+    vk::Format Format;
+    bool bHasStencilComponent;
+};
+
 struct FQueueFamilyIndices
 {
     std::optional<uint32> GraphicsFamily;
@@ -51,6 +57,7 @@ public:
     
     vk::PhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
     vk::Device GetLogicalDevice() const { return m_LogicalDevice; }
+    const FVulkanDepthFormatInfo& GetDepthFormatInfo() const { return m_DepthFormatInfo; }
     const FQueueFamilyIndices& GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
     vk::Queue GetGraphicsQueue() const { return m_GraphicsQueue; }
     vk::Queue GetPresentQueue() const { return m_PresentQueue; }
@@ -60,6 +67,7 @@ public:
 private:
     void SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     void CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice);
+    void FindAndSelectDepthFormat(vk::PhysicalDevice PhysicalDevice);
     void CreateCommandPoolAndCommandBuffers();
     void CreateTransferCommandPool();
     void InitializeTracyContext(vk::Instance VulkanInstance);
@@ -79,6 +87,7 @@ private:
     std::vector<vk::CommandBuffer> m_CommandBuffers;
     
     FVulkanDeviceInfo m_DeviceInfo;
+    FVulkanDepthFormatInfo m_DepthFormatInfo;
     FQueueFamilyIndices m_QueueFamilyIndices;
     
     // Always null in Distribution builds. If using this outside of the Tracy Vulkan macros, you will have to null-check it. 

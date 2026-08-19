@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "VulkanDevice.h"
+#include "VulkanMemoryAllocator.h"
 #include "Application/Window.h"
 
 struct FFrameSyncObjects
@@ -19,8 +20,8 @@ struct FAcquiredFrame
 class CVulkanSwapChain
 {
 public:
-    CVulkanSwapChain(CVulkanDevice& VulkanDevice, vk::Instance VulkanInstance,const FNativeWindowHandle& NativeWindowHandle,
-        const vk::Extent2D& InitialSize, uint32 FramesInFlight, bool bRequestVSync);
+    CVulkanSwapChain(CVulkanDevice& VulkanDevice, CVulkanMemoryAllocator& MemoryAllocator, vk::Instance VulkanInstance,
+        const FNativeWindowHandle& NativeWindowHandle, const vk::Extent2D& InitialSize, uint32 FramesInFlight, bool bRequestVSync);
     
     void Destroy(const vk::Instance& VulkanInstance);
     void Resize(uint32 NewWidth, uint32 NewHeight);
@@ -35,6 +36,8 @@ public:
     uint32 GetImageCount() const { return static_cast<uint32>(m_SwapChainImages.size()); }
     uint32 GetMinImageCount() const { return m_MinimumImageCount; }
     vk::ImageView GetImageView(uint32 ImageIndex) const { return m_SwapChainImageViews[ImageIndex]; }
+    vk::Image GetDepthImage() const { return m_DepthImage.Image; }
+    vk::ImageView GetDepthImageView() const { return m_DepthImageView; }
     vk::Semaphore GetRenderFinishedSemaphore(uint32 ImageIndex) const { return m_RenderFinishedSemaphores[ImageIndex]; }
     vk::Semaphore GetImageAvailableSemaphore(uint32 FrameIndex) const { return m_FrameSyncObjects[FrameIndex].ImageAvailableSemaphore; }
     vk::Fence GetInFlightFence(uint32 FrameIndex) const { return m_FrameSyncObjects[FrameIndex].InFlightFence; }
@@ -52,6 +55,9 @@ private:
     void CreateFrameSyncObjects();
     void DestroyFrameSyncObjects();
     
+    void CreateDepthResources();
+    void DestroyDepthResources();
+    
     void SelectImageFormatAndColorSpace(vk::Format& OutImageFormat, vk::ColorSpaceKHR& OutColorSpace) const;
     vk::PresentModeKHR SelectPresentMode() const;
 private:
@@ -61,12 +67,15 @@ private:
     std::vector<FFrameSyncObjects> m_FrameSyncObjects;
     
     CVulkanDevice& m_VulkanDevice;
+    CVulkanMemoryAllocator& m_MemoryAllocator;
+    FAllocatedVulkanImage m_DepthImage;
     
     vk::PhysicalDevice m_PhysicalDevice;
     vk::Device m_LogicalDevice;
     vk::SurfaceKHR m_Surface;
     vk::Format m_SwapChainImageFormat;
     vk::Extent2D m_SwapChainExtent;
+    vk::ImageView m_DepthImageView;
     vk::SwapchainKHR m_SwapChain;
     
     uint32 m_FramesInFlight = 0;

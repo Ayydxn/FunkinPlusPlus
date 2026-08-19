@@ -41,12 +41,24 @@ bool CVulkanDynamicRHI::BeginFrame()
     
     const vk::Image AcquiredImage = SwapChain->GetImage(AcquiredFrame.ImageIndex);
     
+    const bool bHasStencilComponent = m_VulkanContext.GetDevice().GetDepthFormatInfo().bHasStencilComponent;
+    const vk::ImageLayout TargetDepthImageLayout = bHasStencilComponent ? vk::ImageLayout::eDepthStencilAttachmentOptimal : vk::ImageLayout::eDepthAttachmentOptimal;
+    
     CVulkanUtils::TransitionImageLayout(CommandBuffer, AcquiredImage, vk::PipelineStageFlagBits2::eTopOfPipe,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone,
         vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
     
+    CVulkanUtils::TransitionImageLayout(CommandBuffer, m_VulkanContext.GetSwapChain()->GetDepthImage(),
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests, vk::AccessFlagBits2::eNone,
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite, vk::ImageLayout::eUndefined, TargetDepthImageLayout);
+    
     vk::ClearColorValue ClearColorValue;
     ClearColorValue.float32 = std::array<float, 4> { 0.25f, 0.25f, 0.25f, 1.0f };
+    
+    vk::ClearDepthStencilValue ClearDepthStencilValue;
+    ClearDepthStencilValue.depth = 1.0f;
+    ClearDepthStencilValue.stencil = 0;
     
     vk::RenderingAttachmentInfo ColorAttachmentInfo = {};
     ColorAttachmentInfo.sType = vk::StructureType::eRenderingAttachmentInfo;
@@ -56,12 +68,24 @@ bool CVulkanDynamicRHI::BeginFrame()
     ColorAttachmentInfo.storeOp = vk::AttachmentStoreOp::eStore;
     ColorAttachmentInfo.clearValue = ClearColorValue;
     
+    vk::RenderingAttachmentInfo DepthAttachmentInfo = {};
+    DepthAttachmentInfo.sType = vk::StructureType::eRenderingAttachmentInfo;
+    DepthAttachmentInfo.imageView = SwapChain->GetDepthImageView();
+    DepthAttachmentInfo.imageLayout = TargetDepthImageLayout;
+    DepthAttachmentInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    DepthAttachmentInfo.storeOp = vk::AttachmentStoreOp::eDontCare; // If we ever need to sample the depth image for post-processing effects, this gets set to eStore.
+    DepthAttachmentInfo.clearValue = ClearDepthStencilValue;
+    
     vk::RenderingInfo RenderingInfo = {};
     RenderingInfo.sType = vk::StructureType::eRenderingInfo;
     RenderingInfo.renderArea = vk::Rect2D({ 0, 0 }, SwapChain->GetExtent());
     RenderingInfo.layerCount = 1;
     RenderingInfo.colorAttachmentCount = 1;
     RenderingInfo.pColorAttachments = &ColorAttachmentInfo;
+    RenderingInfo.pDepthAttachment = &DepthAttachmentInfo;
+    
+    if (bHasStencilComponent)
+        RenderingInfo.pStencilAttachment = &DepthAttachmentInfo;
     
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     

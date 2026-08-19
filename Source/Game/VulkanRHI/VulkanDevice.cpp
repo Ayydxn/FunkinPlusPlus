@@ -3,6 +3,7 @@
 #include "TracyVulkanAdapter.h"
 #include "VulkanContext.h"
 #include "VulkanDebugUtils.h"
+#include "VulkanUtils.h"
 
 constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
 {
@@ -22,6 +23,8 @@ CVulkanDevice::CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSu
     m_DeviceInfo.VendorName = GetVendorNameFromID(m_PhysicalDevice.getProperties().vendorID);
     m_DeviceInfo.DriverVersion = UnpackDriverVersion(m_PhysicalDevice.getProperties().vendorID, m_PhysicalDevice.getProperties().driverVersion);
     m_DeviceInfo.VulkanAPIVersion = UnpackVulkanAPIVersion(m_PhysicalDevice.getProperties().apiVersion);
+    
+    FindAndSelectDepthFormat(m_PhysicalDevice);
     
     LOG_INFO_TAG("VulkanRHI", "Graphics Card Information:");
     LOG_INFO_TAG("VulkanRHI", "   Device: {}", m_DeviceInfo.PhysicalDeviceProperties.deviceName.data());
@@ -217,6 +220,35 @@ void CVulkanDevice::CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice)
     DeviceCreateInfo.flags = vk::DeviceCreateFlags();
     
     VK_CHECK_RESULT(PhysicalDevice.createDevice(DeviceCreateInfo), m_LogicalDevice, "Failed to create Vulkan logical device!")
+}
+
+void CVulkanDevice::FindAndSelectDepthFormat(vk::PhysicalDevice PhysicalDevice)
+{
+    m_DepthFormatInfo = {};
+    m_DepthFormatInfo.Format = vk::Format::eUndefined;
+    m_DepthFormatInfo.bHasStencilComponent = false;
+    
+    constexpr std::array<vk::Format, 4> DepthFormatCandidates =
+    {
+        vk::Format::eD32Sfloat,
+        vk::Format::eD24UnormS8Uint,
+        vk::Format::eD32SfloatS8Uint,
+        vk::Format::eD16Unorm
+    };
+    
+    for (const vk::Format DepthFormatCandidate : DepthFormatCandidates)
+    {
+        const auto FormatProperties = PhysicalDevice.getFormatProperties(DepthFormatCandidate);
+        if (FormatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment)
+        {
+            m_DepthFormatInfo.Format = DepthFormatCandidate;
+            break;
+        }
+    }
+    
+    verifyFunkinf(m_DepthFormatInfo.Format != vk::Format::eUndefined, "Failed to find a supported Vulkan depth format!")
+    
+    m_DepthFormatInfo.bHasStencilComponent = CVulkanUtils::DoesFormatHaveStencilComponent(m_DepthFormatInfo.Format);
 }
 
 void CVulkanDevice::CreateCommandPoolAndCommandBuffers()
