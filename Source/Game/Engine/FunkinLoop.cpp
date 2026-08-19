@@ -37,6 +37,43 @@ bool CFunkinLoop::Initialize()
 
     FEngineDelegates::InitializeDelegate.Broadcast();
     
+    /* -- TEMPORARY: Triangle rendering test -- */
+    
+    // Vertices coordinates
+    const float Vertices[] =
+    {
+        -0.5f, -0.5f * static_cast<float>(sqrt(3)) / 3, 0.0f, // Lower left corner
+        0.5f, -0.5f * static_cast<float>(sqrt(3)) / 3, 0.0f, // Lower right corner
+        0.0f, 0.5f * static_cast<float>(sqrt(3)) * 2 / 3, 0.0f, // Upper corner
+        -0.5f / 2, 0.5f * static_cast<float>(sqrt(3)) / 6, 0.0f, // Inner left
+        0.5f / 2, 0.5f * static_cast<float>(sqrt(3)) / 6, 0.0f, // Inner right
+        0.0f, -0.5f * static_cast<float>(sqrt(3)) / 3, 0.0f // Inner down
+    };
+
+    // Indices for vertices order
+    const uint32 Indices[] =
+    {
+        0, 3, 5, // Lower left triangle
+        3, 2, 4, // Upper triangle
+        5, 4, 1 // Lower right triangle
+    };
+    
+    FVertexBufferDescription VertexBufferDescription;
+    VertexBufferDescription.InitialData = Vertices;
+    VertexBufferDescription.SizeInBytes = sizeof(Vertices);
+    VertexBufferDescription.Layout = {
+        { "Positions", EShaderDataType::Float3 }
+    };
+    
+    FIndexBufferDescription IndexBufferDescription;
+    IndexBufferDescription.InitialData = Indices;
+    IndexBufferDescription.SizeInBytes = sizeof(Indices);
+    
+    m_VertexBuffer = CreateVertexBuffer(ResolveRHIBackend(), m_EngineContext.GetRHIContext(), VertexBufferDescription);
+    m_IndexBuffer = CreateIndexBuffer(ResolveRHIBackend(), m_EngineContext.GetRHIContext(), IndexBufferDescription);
+    
+    /* -- TEMPORARY: Triangle rendering test -- */
+    
     bIsRunning = true;
     
     return true;
@@ -72,7 +109,12 @@ void CFunkinLoop::Tick()
                 /* -- TEMPORARY: Triangle rendering test -- */
                 
                 m_EngineContext.GetRenderer().BindPipeline(*m_EngineContext.GetRenderer().GetGraphicsPipelineManager().GetGraphicsPipeline("TriangleTest"));
-                m_EngineContext.GetRenderer().Draw(3, 1);
+                m_EngineContext.GetRenderer().BindVertexBuffer(*m_VertexBuffer);
+                m_EngineContext.GetRenderer().BindIndexBuffer(*m_IndexBuffer);
+                
+                // (Ayydxn) Currently, you don't see anything because Vulkan's NDC making Y+ down and some shenanigans related to that.
+                // I'll just have to come back and deal with that when cameras become a thing.
+                m_EngineContext.GetRenderer().DrawIndexed(m_IndexBuffer->GetCount(), 1);
                 
                 /* -- TEMPORARY: Triangle rendering test -- */
                 
@@ -101,6 +143,13 @@ void CFunkinLoop::Shutdown()
     LOG_INFO_TAG("Core", "Shutting down...");
     
     FEngineDelegates::ShutdownDelegate.Broadcast();
+    
+    /* -- TEMPORARY: Triangle rendering test -- */
+    
+    m_VertexBuffer.reset();
+    m_IndexBuffer.reset();
+    
+    /* -- TEMPORARY: Triangle rendering test -- */
     
     m_EngineContext.GetEventBroadcaster().RemoveListener(m_ListenerHandle);
     m_EngineContext.Shutdown();

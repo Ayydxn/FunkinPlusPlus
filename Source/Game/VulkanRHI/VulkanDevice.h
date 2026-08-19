@@ -16,6 +16,7 @@ struct FQueueFamilyIndices
 {
     std::optional<uint32> GraphicsFamily;
     std::optional<uint32> PresentFamily;
+    std::optional<uint32> TransferFamily;
 
     bool IsComplete() const { return GraphicsFamily.has_value() && PresentFamily.has_value(); }
 };
@@ -46,6 +47,7 @@ public:
     void WaitIdle() const;
     vk::Result Submit(const FSubmitInfo& SubmitInfo) const;
     vk::Result Present(const FPresentInfo& PresentInfo) const;
+    void ImmediateSubmit(const std::function<void(vk::CommandBuffer)>& RecordFunction) const;
     
     vk::PhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
     vk::Device GetLogicalDevice() const { return m_LogicalDevice; }
@@ -59,6 +61,7 @@ private:
     void SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     void CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice);
     void CreateCommandPoolAndCommandBuffers();
+    void CreateTransferCommandPool();
     void InitializeTracyContext(vk::Instance VulkanInstance);
     
     bool IsPhysicalDeviceSuitable(vk::PhysicalDevice PhysicalDevice, vk::SurfaceKHR ProbeSurface);
@@ -84,6 +87,7 @@ private:
     vk::Queue m_GraphicsQueue;
     vk::Queue m_PresentQueue;
     vk::CommandPool m_CommandPool;
+    vk::CommandPool m_TransferCommandPool;
     vk::PhysicalDevice m_PhysicalDevice;
     vk::Device m_LogicalDevice;
 };

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "IndexBuffer.h"
 #include "RHIContext.h"
 #include "RHICore/GraphicsPipeline.h"
 
@@ -15,7 +16,11 @@ public:
     virtual void EndFrame() = 0;
     
     virtual void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) = 0;
+    virtual void BindVertexBuffer(const IVertexBuffer& VertexBuffer) = 0;
+    virtual void BindIndexBuffer(const IIndexBuffer& IndexBuffer) = 0;
+    
     virtual void Draw(uint32 VertexCount, uint32 InstanceCount) = 0;
+    virtual void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) = 0;
     
     virtual void* GetCurrentCommandBuffer() const = 0;
 protected:

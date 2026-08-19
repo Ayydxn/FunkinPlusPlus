@@ -20,7 +20,11 @@ public:
     void EndFrame() const;
     
     void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const;
+    void BindVertexBuffer(const IVertexBuffer& VertexBuffer) const;
+    void BindIndexBuffer(const IIndexBuffer& IndexBuffer) const;
+    
     void Draw(uint32 VertexCount, uint32 InstanceCount) const;
+    void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) const;
     
     void* GetCurrentCommandBuffer() const { return m_DynamicRHI.GetCurrentCommandBuffer(); }
     

@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "VulkanDevice.h"
-#include "VulkanIncludes.h"
+#include "VulkanMemoryAllocator.h"
 #include "VulkanSwapChain.h"
 #include "Application/Window.h"
 #include "RHICore/RHIContext.h"
@@ -19,6 +19,7 @@ public:
     
     vk::Instance GetInstance() const { return m_Instance; }
     CVulkanDevice& GetDevice() const { return *m_Device; }
+    CVulkanMemoryAllocator& GetMemoryAllocator() const { return *m_MemoryAllocator; }
     std::shared_ptr<CVulkanSwapChain> GetSwapChain() const { return m_SwapChain; }
 public:
     // TODO: (Ayydxn) Once game settings exist, read this from there instead of hardcoding it.
@@ -32,6 +33,7 @@ private:
     static bool bEnableValidationLayers;
     
     std::unique_ptr<CVulkanDevice> m_Device;
+    std::unique_ptr<CVulkanMemoryAllocator> m_MemoryAllocator;
     std::shared_ptr<CVulkanSwapChain> m_SwapChain;
     
     vk::Instance m_Instance;

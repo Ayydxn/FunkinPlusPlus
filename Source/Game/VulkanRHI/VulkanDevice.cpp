@@ -37,6 +37,7 @@ CVulkanDevice::CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSu
     
     /* -- Other Resources -- */
     CreateCommandPoolAndCommandBuffers();
+    CreateTransferCommandPool();
     InitializeTracyContext(VulkanInstance);
 }
 
@@ -49,6 +50,7 @@ void CVulkanDevice::Destroy() const
             TracyVkDestroy(m_TracyVulkanContext)
     #endif
     
+    m_LogicalDevice.destroyCommandPool(m_TransferCommandPool);
     m_LogicalDevice.destroyCommandPool(m_CommandPool);
     m_LogicalDevice.destroy();
 }
@@ -86,6 +88,53 @@ vk::Result CVulkanDevice::Present(const FPresentInfo& PresentInfo) const
     VulkanPresentInfo.pImageIndices = &PresentInfo.ImageIndex;
     
     return m_PresentQueue.presentKHR(VulkanPresentInfo);
+}
+
+void CVulkanDevice::ImmediateSubmit(const std::function<void(vk::CommandBuffer)>& RecordFunction) const
+{
+    vk::CommandBufferAllocateInfo CommandBufferAllocateInfo = {};
+    CommandBufferAllocateInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+    CommandBufferAllocateInfo.commandPool = m_TransferCommandPool;
+    CommandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
+    CommandBufferAllocateInfo.commandBufferCount = 1;
+    
+    std::vector<vk::CommandBuffer> AllocatedCommandBuffers;
+    VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), AllocatedCommandBuffers, "Failed to allocate an immediate-submit Vulkan command buffer!")
+    
+    const vk::CommandBuffer CommandBuffer = AllocatedCommandBuffers[0];
+    
+    vk::CommandBufferBeginInfo CommandBufferBeginInfo = {};
+    CommandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+    CommandBufferBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+    
+    VK_CHECK_RESULT_VOID(CommandBuffer.begin(CommandBufferBeginInfo), "Failed to begin recording an immediate-submit Vulkan command buffer!")
+    
+    RecordFunction(CommandBuffer);
+    
+    VK_CHECK_RESULT_VOID(CommandBuffer.end(), "Failed to stop recording an immediate-submit Vulkan command buffer!")
+    
+    vk::FenceCreateInfo FenceCreateInfo = {};
+    FenceCreateInfo.sType = vk::StructureType::eFenceCreateInfo;
+    
+    vk::Fence SubmitFence;
+    VK_CHECK_RESULT(m_LogicalDevice.createFence(FenceCreateInfo), SubmitFence, "Failed to create an immediate-submit fence!")
+    
+    vk::SubmitInfo SubmitInfo = {};
+    SubmitInfo.sType = vk::StructureType::eSubmitInfo;
+    SubmitInfo.commandBufferCount = 1;
+    SubmitInfo.pCommandBuffers = &CommandBuffer;
+    
+    const vk::Result SubmitResult = m_GraphicsQueue.submit(1, &SubmitInfo, SubmitFence);
+    verifyFunkinf(SubmitResult == vk::Result::eSuccess, "Failed to submit an immediate-submit Vulkan command buffer! ({})", vk::to_string(SubmitResult))
+    
+    // Deliberately blocking. This function is meant for infrequent, synchronous "upload and wait" work like staging buffers copies.
+    // Nothing that runs every single frame.
+    // So, stalling here is fine and keeps the caller's ownership story simple (staging resources can be destroyed the instant this call returns).
+    const vk::Result WaitResult = m_LogicalDevice.waitForFences(1, &SubmitFence, vk::True, std::numeric_limits<uint64>::max());
+    verifyFunkinf(WaitResult == vk::Result::eSuccess, "Failed to wait for the immediate-submit fence! ({})", vk::to_string(WaitResult))
+    
+    m_LogicalDevice.destroyFence(SubmitFence);
+    m_LogicalDevice.freeCommandBuffers(m_TransferCommandPool, 1, &CommandBuffer);
 }
 
 vk::CommandBuffer CVulkanDevice::GetCommandBuffer(uint32 FrameIndex) const
@@ -188,6 +237,16 @@ void CVulkanDevice::CreateCommandPoolAndCommandBuffers()
     VK_CHECK_RESULT(m_LogicalDevice.allocateCommandBuffers(CommandBufferAllocateInfo), m_CommandBuffers, "Failed to allocate Vulkan command buffers! (VkDevice)")
 }
 
+void CVulkanDevice::CreateTransferCommandPool()
+{
+    vk::CommandPoolCreateInfo CommandPoolCreateInfo = {};
+    CommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
+    CommandPoolCreateInfo.queueFamilyIndex = m_QueueFamilyIndices.TransferFamily.value();
+    CommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+    
+    VK_CHECK_RESULT(m_LogicalDevice.createCommandPool(CommandPoolCreateInfo), m_TransferCommandPool, "Failed to create Vulkan transfer command pool!")
+}
+
 void CVulkanDevice::InitializeTracyContext(vk::Instance VulkanInstance)
 {
     #ifdef TRACY_ENABLE
@@ -280,6 +339,9 @@ FQueueFamilyIndices CVulkanDevice::FindQueueFamilies(vk::PhysicalDevice Physical
         if (SurfaceSupportResult.result == vk::Result::eSuccess && SurfaceSupportResult.value == vk::True)
             QueueFamilyIndices.PresentFamily = i;
         
+        if (QueueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eTransfer)
+            QueueFamilyIndices.TransferFamily = i;
+
         if (QueueFamilyIndices.IsComplete())
             break;
     }

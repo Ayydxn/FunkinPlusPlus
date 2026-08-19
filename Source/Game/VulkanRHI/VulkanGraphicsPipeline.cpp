@@ -2,6 +2,34 @@
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanDebugUtils.h"
 
+namespace
+{
+    vk::Format GetShaderDataTypeVulkanFormat(EShaderDataType DataType)
+    {
+        switch (DataType)
+        {
+            case EShaderDataType::Float:     return vk::Format::eR32Sfloat;
+            case EShaderDataType::Float2:    return vk::Format::eR32G32Sfloat;
+            case EShaderDataType::Float3:    return vk::Format::eR32G32B32Sfloat;
+            case EShaderDataType::Float4:    return vk::Format::eR32G32B32A32Sfloat;
+                
+            case EShaderDataType::Matrix3x3:
+            case EShaderDataType::Matrix4x4:
+                return vk::Format::eUndefined;
+            
+            case EShaderDataType::Int:       return vk::Format::eR32Sint;
+            case EShaderDataType::Int2:      return vk::Format::eR32G32Sint;
+            case EShaderDataType::Int3:      return vk::Format::eR32G32B32Sint;
+            case EShaderDataType::Int4:      return vk::Format::eR32G32B32A32Sint;
+            
+            case EShaderDataType::Boolean:   return vk::Format::eUndefined;
+        }
+        
+        verifyFunkinf(false, "Failed to get Vulkan format for unknown shader data type!")
+        return vk::Format::eUndefined;
+    }
+}
+
 CVulkanGraphicsPipeline::CVulkanGraphicsPipeline(const CVulkanContext& VulkanContext, const FGraphicsPipelineDescription& Description)
     : m_VulkanDevice(VulkanContext.GetDevice()), m_GraphicsPipelineDescription(Description)
 {
@@ -41,13 +69,32 @@ void CVulkanGraphicsPipeline::Invalidate()
     DynamicStateCreateInfo.dynamicStateCount = static_cast<uint32>(DynamicStates.size());
     DynamicStateCreateInfo.pDynamicStates = DynamicStates.data();
     
-    // TODO: (Ayydxn) Make this configurable ASAP. This works for now for our single triangle test as we don't have vertex/index buffers yet.
+    const FVertexBufferLayout& VertexBufferLayout = m_GraphicsPipelineDescription.VertexBufferLayout;
+    
+    vk::VertexInputBindingDescription VertexInputBindingDescription = {};
+    VertexInputBindingDescription.binding = 0;
+    VertexInputBindingDescription.stride = VertexBufferLayout.GetStride();
+    VertexInputBindingDescription.inputRate = vk::VertexInputRate::eVertex;
+    
+    std::vector<vk::VertexInputAttributeDescription> VertexInputAttributeDescriptions(VertexBufferLayout.GetElementCount());
+    int32 Location = 0;
+    
+    for (const FVertexBufferElement& VertexBufferElement : VertexBufferLayout.GetElements())
+    {
+        VertexInputAttributeDescriptions[Location].binding = 0;
+        VertexInputAttributeDescriptions[Location].location = Location;
+        VertexInputAttributeDescriptions[Location].format = GetShaderDataTypeVulkanFormat(VertexBufferElement.DataType);
+        VertexInputAttributeDescriptions[Location].offset = VertexBufferElement.Offset;
+        
+        Location++;
+    }
+    
     vk::PipelineVertexInputStateCreateInfo VertexInputStateCreateInfo = {};
     VertexInputStateCreateInfo.sType = vk::StructureType::ePipelineVertexInputStateCreateInfo;
-    VertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
-    VertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr;
-    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
-    VertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr;
+    VertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+    VertexInputStateCreateInfo.pVertexBindingDescriptions = &VertexInputBindingDescription;
+    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32>(VertexInputAttributeDescriptions.size());
+    VertexInputStateCreateInfo.pVertexAttributeDescriptions = VertexInputAttributeDescriptions.data();
     
     vk::PipelineInputAssemblyStateCreateInfo InputAssemblyStateCreateInfo = {};
     InputAssemblyStateCreateInfo.sType = vk::StructureType::ePipelineInputAssemblyStateCreateInfo;

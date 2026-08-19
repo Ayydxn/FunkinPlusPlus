@@ -13,7 +13,11 @@ public:
     void EndFrame() override;
     
     void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) override;
+    void BindVertexBuffer(const IVertexBuffer& VertexBuffer) override;
+    void BindIndexBuffer(const IIndexBuffer& IndexBuffer) override;
+    
     void Draw(uint32 VertexCount, uint32 InstanceCount) override;
+    void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) override;
     
     void* GetCurrentCommandBuffer() const override;
 private:

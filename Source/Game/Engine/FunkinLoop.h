@@ -22,6 +22,9 @@ private:
     double ResolveDefaultRenderIntervalSeconds() const;
     ERHIBackend ResolveRHIBackend() const;
 private:
+    std::shared_ptr<IVertexBuffer> m_VertexBuffer;
+    std::shared_ptr<IIndexBuffer> m_IndexBuffer;
+    
     CEngineContext m_EngineContext;
     CApplication m_Application;
     CFramePacer m_FramePacer;

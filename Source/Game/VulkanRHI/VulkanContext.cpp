@@ -119,6 +119,9 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, u
     
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_Device->GetLogicalDevice());
     
+    m_MemoryAllocator = std::make_unique<CVulkanMemoryAllocator>();
+    m_MemoryAllocator->Initialize(m_Instance, m_Device->GetPhysicalDevice(), m_Device->GetLogicalDevice());
+    
     const vk::Extent2D InitialExtent(InitialWindowWidth, InitialWindowHeight);
     m_SwapChain = std::make_unique<CVulkanSwapChain>(*m_Device, m_Instance, NativeWindowHandle, InitialExtent, DefaultFramesInFlight, bRequestVSync);
     
@@ -131,6 +134,9 @@ void CVulkanContext::Destroy()
     
     m_SwapChain->Destroy(m_Instance);
     m_SwapChain.reset();
+    
+    m_MemoryAllocator->Shutdown();
+    m_MemoryAllocator.reset();
     
     m_Device->Destroy();
     m_Device.reset();

@@ -9,7 +9,10 @@ void CRenderer::Initialize()
     LoadShader(CPaths::GetShadersDirectory() / "TriangleTest");
     
     m_GraphicsPipelineManager.GetOrCreate("TriangleTest", {
-        .Shader = GetShader("TriangleTest")
+        .Shader = GetShader("TriangleTest"),
+        .VertexBufferLayout =  {
+            { "Positions", EShaderDataType::Float3 }
+        }
     });
 }
 
@@ -28,9 +31,24 @@ void CRenderer::BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const
     m_DynamicRHI.BindPipeline(GraphicsPipeline);
 }
 
+void CRenderer::BindVertexBuffer(const IVertexBuffer& VertexBuffer) const
+{
+    m_DynamicRHI.BindVertexBuffer(VertexBuffer);
+}
+
+void CRenderer::BindIndexBuffer(const IIndexBuffer& IndexBuffer) const
+{
+    m_DynamicRHI.BindIndexBuffer(IndexBuffer);
+}
+
 void CRenderer::Draw(uint32 VertexCount, uint32 InstanceCount) const
 {
     m_DynamicRHI.Draw(VertexCount, InstanceCount);
+}
+
+void CRenderer::DrawIndexed(uint32 IndexCount, uint32 InstanceCount) const
+{
+    m_DynamicRHI.DrawIndexed(IndexCount, InstanceCount);
 }
 
 void CRenderer::AddShader(const std::shared_ptr<IShader>& Shader)
