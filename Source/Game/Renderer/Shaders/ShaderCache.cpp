@@ -4,7 +4,8 @@
 #include "Core/Misc/Paths.h"
 #include "Utils/FileUtils.h"
 
-bool CShaderCache::TryLoad(const std::filesystem::path& CacheFilepath, uint64 SourceHash, std::unordered_map<SlangStage, FCompiledShaderStage>& Output)
+bool CShaderCache::TryLoad(const std::filesystem::path& CacheFilepath, uint64 SourceHash, std::unordered_map<SlangStage, FCompiledShaderStage>& Output,
+    FShaderReflectionData& ReflectionOutput)
 {
     std::ifstream FileReader(CacheFilepath, std::ios::in | std::ios::binary);
 
@@ -29,7 +30,44 @@ bool CShaderCache::TryLoad(const std::filesystem::path& CacheFilepath, uint64 So
     }
 
     LOG_INFO_TAG("Renderer", "Loading shader from cache '{}'...", RedactedCacheFilepath);
+    
+    // The reflection block comes immediately after the header, before any stage/bytecode data.
+    for (uint32 i = 0; i < ShaderCacheHeader.ReflectedResourceCount; i++)
+    {
+        FShaderCacheReflectedResourceHeader CacheReflectedResourceHeader;
+        FileReader.read(reinterpret_cast<char*>(&CacheReflectedResourceHeader), sizeof(FShaderCacheReflectedResourceHeader));
 
+        std::string Name(CacheReflectedResourceHeader.NameLength, '\0');
+        FileReader.read(Name.data(), CacheReflectedResourceHeader.NameLength);
+
+        FShaderReflectedResource ShaderReflectedResource;
+        ShaderReflectedResource.Name = std::move(Name);
+        ShaderReflectedResource.Type = CacheReflectedResourceHeader.Type;
+        ShaderReflectedResource.Binding = CacheReflectedResourceHeader.Binding;
+        ShaderReflectedResource.Set = CacheReflectedResourceHeader.Set;
+        ShaderReflectedResource.ArraySize = CacheReflectedResourceHeader.ArraySize;
+        ShaderReflectedResource.StageFlags = CacheReflectedResourceHeader.StageFlags;
+
+        ReflectionOutput.Resources.push_back(std::move(ShaderReflectedResource));
+    }
+
+    for (uint32 i = 0; i < ShaderCacheHeader.ReflectedPushConstantCount; i++)
+    {
+        FShaderCacheReflectedPushConstantHeader CacheReflectedPushConstantHeader;
+        FileReader.read(reinterpret_cast<char*>(&CacheReflectedPushConstantHeader), sizeof(FShaderCacheReflectedPushConstantHeader));
+
+        std::string Name(CacheReflectedPushConstantHeader.NameLength, '\0');
+        FileReader.read(Name.data(), CacheReflectedPushConstantHeader.NameLength);
+
+        FShaderReflectedPushConstant PushConstant;
+        PushConstant.Name = std::move(Name);
+        PushConstant.Size = CacheReflectedPushConstantHeader.Size;
+        PushConstant.Offset = CacheReflectedPushConstantHeader.Offset;
+        PushConstant.StageFlags = CacheReflectedPushConstantHeader.StageFlags;
+
+        ReflectionOutput.PushConstants.push_back(std::move(PushConstant));
+    }
+    
     for (uint32 i = 0; i < ShaderCacheHeader.ShaderStageCount; i++)
     {
         FShaderCacheStageHeader StageHeader;
@@ -47,11 +85,14 @@ bool CShaderCache::TryLoad(const std::filesystem::path& CacheFilepath, uint64 So
 
         Output[StageHeader.Stage] = std::move(CompiledStage);
     }
+    
+    CShaderReflection::LogShaderReflectionData(CacheFilepath.stem().string(), ReflectionOutput);
 
     return true;
 }
 
-void CShaderCache::Write(const std::filesystem::path& CacheFilepath, const uint64 SourceHash, const std::unordered_map<SlangStage, FCompiledShaderStage>& CompiledStages)
+void CShaderCache::Write(const std::filesystem::path& CacheFilepath, const uint64 SourceHash, const std::unordered_map<SlangStage, FCompiledShaderStage>& CompiledStages,
+    const FShaderReflectionData& ReflectionData)
 {
     const std::string RedactedCacheFilepath = CFileUtils::RedactUserFolderFromFilepath(CacheFilepath);
     
@@ -67,8 +108,36 @@ void CShaderCache::Write(const std::filesystem::path& CacheFilepath, const uint6
     FShaderCacheHeader ShaderCacheHeader;
     ShaderCacheHeader.ShaderStageCount = static_cast<uint32>(CompiledStages.size());
     ShaderCacheHeader.SourceHash = SourceHash;
+    ShaderCacheHeader.ReflectedResourceCount = static_cast<uint32>(ReflectionData.Resources.size());
+    ShaderCacheHeader.ReflectedPushConstantCount = static_cast<uint32>(ReflectionData.PushConstants.size());
 
     FileWriter.write(reinterpret_cast<const char*>(&ShaderCacheHeader), sizeof(FShaderCacheHeader));
+    
+    for (const auto& [Name, Type, Binding, Set, ArraySize, ShaderStageFlags] : ReflectionData.Resources)
+    {
+        FShaderCacheReflectedResourceHeader CacheReflectedResourceHeader;
+        CacheReflectedResourceHeader.Type = Type;
+        CacheReflectedResourceHeader.Binding = Binding;
+        CacheReflectedResourceHeader.Set = Set;
+        CacheReflectedResourceHeader.ArraySize = ArraySize;
+        CacheReflectedResourceHeader.StageFlags = ShaderStageFlags;
+        CacheReflectedResourceHeader.NameLength = static_cast<uint32>(Name.size());
+
+        FileWriter.write(reinterpret_cast<const char*>(&CacheReflectedResourceHeader), sizeof(FShaderCacheReflectedResourceHeader));
+        FileWriter.write(Name.data(), static_cast<int64>(Name.size()));
+    }
+
+    for (const auto& [Name, Size, Offset, ShaderStageFlags] : ReflectionData.PushConstants)
+    {
+        FShaderCacheReflectedPushConstantHeader CacheReflectedPushConstantHeader;
+        CacheReflectedPushConstantHeader.Size = Size;
+        CacheReflectedPushConstantHeader.Offset = Offset;
+        CacheReflectedPushConstantHeader.StageFlags = ShaderStageFlags;
+        CacheReflectedPushConstantHeader.NameLength = static_cast<uint32>(Name.size());
+
+        FileWriter.write(reinterpret_cast<const char*>(&CacheReflectedPushConstantHeader), sizeof(FShaderCacheReflectedPushConstantHeader));
+        FileWriter.write(Name.data(), static_cast<int64>(Name.size()));
+    }
 
     for (const auto& [Stage, CompiledStage] : CompiledStages)
     {
@@ -106,6 +175,22 @@ void CShaderCache::DumpBytecode(const std::filesystem::path& CacheFilepath, cons
         return;
     }
 
+    // The reflection block sits between the header and the stage/bytecode blocks.
+    // We Skip past it the same way TryLoad reads through it since this function only cares about bytecode.
+    for (uint32 i = 0; i < ShaderCacheHeader.ReflectedResourceCount; i++)
+    {
+        FShaderCacheReflectedResourceHeader CacheReflectedResourceHeader;
+        FileReader.read(reinterpret_cast<char*>(&CacheReflectedResourceHeader), sizeof(FShaderCacheReflectedResourceHeader));
+        FileReader.seekg(CacheReflectedResourceHeader.NameLength, std::ios::cur);
+    }
+
+    for (uint32 i = 0; i < ShaderCacheHeader.ReflectedPushConstantCount; i++)
+    {
+        FShaderCacheReflectedPushConstantHeader CacheReflectedPushConstantHeader;
+        FileReader.read(reinterpret_cast<char*>(&CacheReflectedPushConstantHeader), sizeof(FShaderCacheReflectedPushConstantHeader));
+        FileReader.seekg(CacheReflectedPushConstantHeader.NameLength, std::ios::cur);
+    }
+    
     for (uint32 i = 0; i < ShaderCacheHeader.ShaderStageCount; i++)
     {
         FShaderCacheStageHeader ShaderCacheStageHeader;

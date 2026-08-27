@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #define CURRENT_MAGIC_NUMBER_IDENTIFIER 0x66707363 // "fpsc" - Funkin++ Shader Cache
-#define CURRENT_SHADER_CACHE_VERSION 1
+#define CURRENT_SHADER_CACHE_VERSION 2
 
 struct FShaderCacheHeader
 {
@@ -26,6 +26,32 @@ struct FShaderCacheHeader
 
     uint32 ShaderStageCount = 0;
     uint64 SourceHash = 0;
+    
+    // Counts driving the reflection block that immediately follows this header, before any stage/bytecode data.
+    uint32 ReflectedResourceCount = 0;
+    uint32 ReflectedPushConstantCount = 0;
+};
+
+// Fixed-size portion of one FShaderReflectedResource.
+// Immediately followed in the file by NameLength raw bytes of the resource's name.
+struct FShaderCacheReflectedResourceHeader
+{
+    EShaderResourceType Type = EShaderResourceType::UniformBuffer;
+    uint32 Binding = 0;
+    uint32 Set = 0;
+    uint32 ArraySize = 1;
+    EShaderStage StageFlags = EShaderStage::None;
+    uint32 NameLength = 0;
+};
+
+// Fixed-size portion of one FShaderReflectedPushConstant.
+// Immediately followed in the file by NameLength raw bytes of the push constant's name.
+struct FShaderCacheReflectedPushConstantHeader
+{
+    uint32 Size = 0;
+    uint32 Offset = 0;
+    EShaderStage StageFlags = EShaderStage::None;
+    uint32 NameLength = 0;
 };
 
 struct FShaderCacheStageHeader
@@ -38,8 +64,10 @@ struct FShaderCacheStageHeader
 class CShaderCache
 {
 public:
-    static bool TryLoad(const std::filesystem::path& CacheFilepath, uint64 SourceHash, std::unordered_map<SlangStage, FCompiledShaderStage>& Output);
-    static void Write(const std::filesystem::path& CacheFilepath, uint64 SourceHash, const std::unordered_map<SlangStage, FCompiledShaderStage>& CompiledStages);
+    static bool TryLoad(const std::filesystem::path& CacheFilepath, uint64 SourceHash, std::unordered_map<SlangStage, FCompiledShaderStage>& Output,
+        FShaderReflectionData& ReflectionOutput);
+    static void Write(const std::filesystem::path& CacheFilepath, uint64 SourceHash, const std::unordered_map<SlangStage, FCompiledShaderStage>& CompiledStages,
+        const FShaderReflectionData& ReflectionData);
     static void DumpBytecode(const std::filesystem::path& CacheFilepath, const std::filesystem::path& OutputDirectory);
 
     static std::filesystem::path GetCacheFilepath(const std::string& ShaderName);

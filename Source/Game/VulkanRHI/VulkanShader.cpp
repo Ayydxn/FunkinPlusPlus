@@ -26,18 +26,18 @@ CVulkanShader::CVulkanShader(CVulkanDevice& VulkanDevice, CShaderCompiler& Shade
     m_Name = Name;
     
     std::unordered_map<SlangStage, FCompiledShaderStage> CompiledShaderStages;
-    ShaderCompiler.CompileShader(Name, Source, CompiledShaderStages);
+    ShaderCompiler.CompileShader(Name, Source, CompiledShaderStages, m_ReflectionData);
  
     CreateShaderModules(CompiledShaderStages);
 }
 
-CVulkanShader::CVulkanShader(CVulkanDevice& VulkanDevice, CShaderCompiler& ShaderCompiler, const std::filesystem::path& Filepath)
+CVulkanShader::CVulkanShader(CVulkanDevice& VulkanDevice, CShaderCompiler& ShaderCompiler, const std::filesystem::path& Filepath, bool bForceRecompile)
     : m_VulkanDevice(VulkanDevice)
 {
     m_Name = Filepath.stem().string();
     
     std::unordered_map<SlangStage, FCompiledShaderStage> CompiledShaderStages;
-    ShaderCompiler.CompileShaderFromFile(Filepath, CompiledShaderStages);
+    ShaderCompiler.CompileShaderFromFile(Filepath, CompiledShaderStages, m_ReflectionData, bForceRecompile);
  
     CreateShaderModules(CompiledShaderStages);
 }

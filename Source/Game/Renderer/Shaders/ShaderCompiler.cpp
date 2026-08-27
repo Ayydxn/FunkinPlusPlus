@@ -55,7 +55,8 @@ void CShaderCompiler::Initialize(ERHIBackend RHIBackend)
     verifyFunkinf(SLANG_SUCCEEDED(SessionCreationResult), "Failed to create the Slang compilation session!")
 }
 
-void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::string& ShaderSource, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput)
+void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::string& ShaderSource, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput,
+    FShaderReflectionData& OutputReflectionData)
 {
     LOG_INFO_TAG("Renderer", "Compiling shader '{}'...", ShaderName);
 
@@ -90,7 +91,7 @@ void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::st
         EntryPoints.push_back(EntryPoint);
         ComponentTypes.push_back(EntryPoint);
     }
-
+    
     Slang::ComPtr<slang::IComponentType> ComposedProgram;
     {
         Slang::ComPtr<slang::IBlob> DiagnosticsBlob;
@@ -102,6 +103,19 @@ void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::st
 
         if (SLANG_FAILED(Result))
             return;
+    }
+    
+    // Reflect the whole composed program (every stage/entry point) in one pass, while ComposedProgram is still alive.
+    // We have to do this now since ProgramLayout is owned by the IComponentType it came from and doesn't outlive it.
+    {
+        Slang::ComPtr<slang::IBlob> DiagnosticsBlob;
+        
+        slang::ProgramLayout* ProgramLayout = ComposedProgram->getLayout(0, DiagnosticsBlob.writeRef());
+        
+        DiagnoseIfNeeded(DiagnosticsBlob);
+        
+        if (ProgramLayout)
+            OutputReflectionData = CShaderReflection::Extract(ProgramLayout);
     }
 
     // Retrieve and store the SPIR-V bytecode for each entry point
@@ -133,20 +147,23 @@ void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::st
             CompilationOutput[CompiledShaderStage.ShaderStage] = std::move(CompiledShaderStage);
         }
     }
+    
+    CShaderReflection::LogShaderReflectionData(ShaderName, OutputReflectionData);
 }
 
-void CShaderCompiler::CompileShaderFromFile(const std::filesystem::path& ShaderFilepath, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput)
+void CShaderCompiler::CompileShaderFromFile(const std::filesystem::path& ShaderFilepath, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput,
+    FShaderReflectionData& OutputReflectionData, bool bForceRecompile)
 {
     // TODO: (Ayydxn) Gate this behind some sort of renderer setting to toggle shader caching. For now, it's always enabled.
     const std::string ShaderSource = CFileUtils::ReadFile(ShaderFilepath);
     const uint64 SourceHash = CShaderCache::ComputeSourceHash(ShaderSource);
     const std::filesystem::path CacheFilepath = CShaderCache::GetCacheFilepath(ShaderFilepath.stem().string());
 
-    if (CShaderCache::TryLoad(CacheFilepath, SourceHash, CompilationOutput))
+    if (!bForceRecompile && CShaderCache::TryLoad(CacheFilepath, SourceHash, CompilationOutput, OutputReflectionData))
         return;
 
-    CompileShader(ShaderFilepath.string(), ShaderSource, CompilationOutput);
-    CShaderCache::Write(CacheFilepath, SourceHash, CompilationOutput);
+    CompileShader(ShaderFilepath.string(), ShaderSource, CompilationOutput, OutputReflectionData);
+    CShaderCache::Write(CacheFilepath, SourceHash, CompilationOutput, OutputReflectionData);
 }
 
 void CShaderCompiler::DiagnoseIfNeeded(slang::IBlob* DiagnosticsBlob)

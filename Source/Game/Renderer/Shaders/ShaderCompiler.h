@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "ShaderReflection.h"
 #include "RHICore/RHIContext.h"
 
 #include <slang-com-ptr.h>
@@ -23,8 +24,10 @@ public:
 
     void Initialize(ERHIBackend RHIBackend);
 
-    void CompileShader(const std::string& ShaderName, const std::string& ShaderSource, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput);
-    void CompileShaderFromFile(const std::filesystem::path& ShaderFilepath, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput);
+    void CompileShader(const std::string& ShaderName, const std::string& ShaderSource, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput,
+        FShaderReflectionData& OutputReflectionData);
+    void CompileShaderFromFile(const std::filesystem::path& ShaderFilepath, std::unordered_map<SlangStage, FCompiledShaderStage>& CompilationOutput,
+        FShaderReflectionData& OutputReflectionData, bool bForceRecompile = false);
 private:
     void DiagnoseIfNeeded(slang::IBlob* DiagnosticsBlob);
 private:

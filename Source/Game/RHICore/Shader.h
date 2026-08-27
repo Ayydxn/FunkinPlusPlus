@@ -22,4 +22,4 @@ protected:
 };
 
 std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHIContext, CShaderCompiler& ShaderCompiler, const std::string& Name, const std::string& Source);
-std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHIContext, CShaderCompiler& ShaderCompiler, const std::filesystem::path& Filepath);
+std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHIContext, CShaderCompiler& ShaderCompiler, const std::filesystem::path& Filepath, bool bForceRecompile = false);

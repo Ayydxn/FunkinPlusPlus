@@ -24,7 +24,8 @@ std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHICo
     return nullptr;
 }
 
-std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHIContext, CShaderCompiler& ShaderCompiler, const std::filesystem::path& Filepath)
+std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHIContext, CShaderCompiler& ShaderCompiler, const std::filesystem::path& Filepath,
+    bool bForceRecompile)
 {
     switch (RHIBackend)
     {
@@ -33,7 +34,7 @@ std::shared_ptr<IShader> CreateShader(ERHIBackend RHIBackend, IRHIContext& RHICo
         {
             const auto& VulkanContext = dynamic_cast<CVulkanContext&>(RHIContext);
             
-            return std::make_shared<CVulkanShader>(VulkanContext.GetDevice(), ShaderCompiler, Filepath);
+            return std::make_shared<CVulkanShader>(VulkanContext.GetDevice(), ShaderCompiler, Filepath, bForceRecompile);
         }
         case ERHIBackend::Direct3D11: verifyFunkinf(false, "Failed to create shader! DirectX 11 isn't supported!") break;
         case ERHIBackend::Direct3D12: verifyFunkinf(false, "Failed to create shader! DirectX 12 isn't supported!") break;
