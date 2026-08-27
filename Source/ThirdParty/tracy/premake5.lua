@@ -39,6 +39,10 @@ project "tracy"
 		targetdir("%{BinariesDir}/ThirdParty/Win64")
 		objdir("%{IntermediateDir}/Win64/%{prj.name}/%{cfg.buildcfg}")
 
+	filter "system:macosx"
+		targetdir("%{BinariesDir}/ThirdParty/Mac")
+		objdir("%{IntermediateDir}/Mac/%{prj.name}/%{cfg.buildcfg}")
+
 	filter "system:linux"
 	    targetdir("%{BinariesDir}/Linux")
 	    objdir("%{IntermediateDir}/Linux/%{prj.name}/%{cfg.buildcfg}")

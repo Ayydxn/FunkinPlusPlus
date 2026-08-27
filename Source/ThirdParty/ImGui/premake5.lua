@@ -39,6 +39,9 @@ project "ImGui"
 
 	filter "system:windows"
 		systemversion "latest"
+
+		targetdir("%{BinariesDir}/ThirdParty/Win64")
+		objdir("%{IntermediateDir}/Win64/%{prj.name}/%{cfg.buildcfg}")
 		
 		files
 		{
@@ -49,6 +52,9 @@ project "ImGui"
         }
     
     filter "system:macosx"
+		targetdir("%{BinariesDir}/Mac")
+		objdir("%{IntermediateDir}/Mac/%{prj.name}/%{cfg.buildcfg}")
+
         files
         {
             "backends/imgui_impl_metal.mm",
@@ -59,6 +65,9 @@ project "ImGui"
 	filter "system:linux"
 		pic "On"
 		systemversion "latest"
+
+		targetdir("%{BinariesDir}/Linux")
+		objdir("%{IntermediateDir}/Linux/%{prj.name}/%{cfg.buildcfg}")
 
 	filter "configurations:Debug"
 		runtime "Debug"
