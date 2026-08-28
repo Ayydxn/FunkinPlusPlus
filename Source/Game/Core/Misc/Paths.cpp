@@ -17,8 +17,10 @@ void CPaths::Initialize()
     m_RootDirectory = ExecutableDirectory.parent_path().parent_path().parent_path();
     m_AssetsDirectory = m_RootDirectory / "Assets";
     m_ShadersDirectory = m_AssetsDirectory / "Shaders";
+    m_CacheDirectory = GetGameDirectory() / "Cache";
     m_ShaderCacheDirectory = GetGameDirectory() / "ShaderCache";
     
+    verifyFunkinf(MakeDirectory(m_CacheDirectory), "Failed to create cache directory!")
     verifyFunkinf(MakeDirectory(m_ShaderCacheDirectory), "Failed to create shader cache directory!")
     
     bIsInitialized = true;
@@ -46,7 +48,14 @@ const std::filesystem::path& CPaths::GetShadersDirectory()
     
     return m_ShadersDirectory;
 }
- 
+
+const std::filesystem::path& CPaths::GetCacheDirectory()
+{
+    verifyFunkin(bIsInitialized)
+    
+    return m_CacheDirectory;
+}
+
 const std::filesystem::path& CPaths::GetShaderCacheDirectory()
 {
     verifyFunkin(bIsInitialized)

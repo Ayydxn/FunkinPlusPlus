@@ -15,13 +15,12 @@ public:
     vk::Pipeline GetHandle() const { return m_Pipeline; }
     vk::PipelineLayout GetLayout() const { return m_PipelineLayout; }
 private:
-    void CreatePipelineLayoutAndCache();
+    void CreatePipelineLayout();
 private:
     CVulkanDevice& m_VulkanDevice;
     const FGraphicsPipelineDescription& m_GraphicsPipelineDescription;
     
     vk::Format m_ColorAttachmentFormat;
     vk::PipelineLayout m_PipelineLayout;
-    vk::PipelineCache m_PipelineCache;
     vk::Pipeline m_Pipeline;
 };

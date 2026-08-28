@@ -61,6 +61,7 @@ public:
     const FQueueFamilyIndices& GetQueueFamilyIndices() const { return m_QueueFamilyIndices; }
     vk::Queue GetGraphicsQueue() const { return m_GraphicsQueue; }
     vk::Queue GetPresentQueue() const { return m_PresentQueue; }
+    vk::PipelineCache GetPipelineCache() const { return m_PipelineCache; }
     const FVulkanDeviceInfo& GetDeviceInfo() const { return m_DeviceInfo; }
     vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const;
     tracy::VkCtx* GetTracyContext() const { return m_TracyVulkanContext; }
@@ -70,6 +71,9 @@ private:
     void FindAndSelectDepthFormat(vk::PhysicalDevice PhysicalDevice);
     void CreateCommandPoolAndCommandBuffers();
     void CreateTransferCommandPool();
+    void CreatePipelineCache();
+    void WritePipelineCacheToDisk() const;
+    std::string GetPipelineCacheFilePath() const;
     void InitializeTracyContext(vk::Instance VulkanInstance);
     
     bool IsPhysicalDeviceSuitable(vk::PhysicalDevice PhysicalDevice, vk::SurfaceKHR ProbeSurface);
@@ -81,6 +85,7 @@ private:
     
     // Physical device helpers
     std::string GetVendorNameFromID(uint32 VendorID);
+    std::string GetPipelineCacheVendorName(uint32 VendorID) const;
     std::string UnpackDriverVersion(uint32 VendorID, uint32 DriverVersion);
     std::string UnpackVulkanAPIVersion(uint32 VulkanAPIVersion);
 private:
@@ -97,6 +102,7 @@ private:
     vk::Queue m_PresentQueue;
     vk::CommandPool m_CommandPool;
     vk::CommandPool m_TransferCommandPool;
+    vk::PipelineCache m_PipelineCache;
     vk::PhysicalDevice m_PhysicalDevice;
     vk::Device m_LogicalDevice;
 };

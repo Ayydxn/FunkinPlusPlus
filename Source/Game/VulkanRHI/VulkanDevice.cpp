@@ -4,6 +4,8 @@
 #include "VulkanContext.h"
 #include "VulkanDebugUtils.h"
 #include "VulkanUtils.h"
+#include "Misc/Paths.h"
+#include "Utils/FileUtils.h"
 
 constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
 {
@@ -41,12 +43,16 @@ CVulkanDevice::CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSu
     /* -- Other Resources -- */
     CreateCommandPoolAndCommandBuffers();
     CreateTransferCommandPool();
+    CreatePipelineCache();
     InitializeTracyContext(VulkanInstance);
 }
 
 void CVulkanDevice::Destroy() const
 {
     WaitIdle();
+    
+    WritePipelineCacheToDisk();
+    m_LogicalDevice.destroyPipelineCache(m_PipelineCache);
     
     #ifdef TRACY_ENABLE
         if (m_TracyVulkanContext)
@@ -279,6 +285,95 @@ void CVulkanDevice::CreateTransferCommandPool()
     VK_CHECK_RESULT(m_LogicalDevice.createCommandPool(CommandPoolCreateInfo), m_TransferCommandPool, "Failed to create Vulkan transfer command pool!")
 }
 
+void CVulkanDevice::CreatePipelineCache()
+{
+    const std::filesystem::path CachePath = GetPipelineCacheFilePath();
+    const std::vector<uint8_t> CacheData = CFileUtils::ReadBinaryFile(CachePath);
+    
+    vk::PipelineCacheCreateInfo PipelineCacheCreateInfo = {};
+    PipelineCacheCreateInfo.sType = vk::StructureType::ePipelineCacheCreateInfo;
+    PipelineCacheCreateInfo.initialDataSize = 0;
+    PipelineCacheCreateInfo.pInitialData = nullptr;
+    PipelineCacheCreateInfo.flags = vk::PipelineCacheCreateFlags();
+    
+    /**
+     * Pipeline cache creation handles two non-fatal recovery path scenarios:
+     *  1. A cache file doesn't exist.
+     *  2. A cache file does exist, but it's stale/invalid and the GPU driver rejects it.
+     *  
+     * Although we do include the GPU device ID and driver version in the cache's filename, it's still worth checking for scenario 2 since
+     * disk corruption, incomplete writes during crashes, or driver header validation changes can still cause the cache file to be rejected.
+     */
+    
+    // Scenario 1 as mentioned above
+    if (CacheData.empty())
+    {
+        LOG_INFO_TAG("VulkanRHI", "No Vulkan pipeline cache found at '{}'! A new cache will be created on shutdown.",
+            CFileUtils::RedactUserFolderFromFilepath(CachePath.string()));
+        
+        VK_CHECK_RESULT(m_LogicalDevice.createPipelineCache(PipelineCacheCreateInfo), m_PipelineCache, "Failed to create Vulkan pipeline cache!")
+
+        return;
+    }
+    
+    // Scenario 2 (Attempt): Try loading cached binary blob from disk
+    PipelineCacheCreateInfo.initialDataSize = CacheData.size();
+    PipelineCacheCreateInfo.pInitialData = CacheData.data();
+    
+    if (m_LogicalDevice.createPipelineCache(&PipelineCacheCreateInfo, nullptr, &m_PipelineCache) == vk::Result::eSuccess)
+    {
+        LOG_INFO_TAG("VulkanRHI", "Successfully loaded existing Vulkan pipeline cache ({} bytes) from '{}'.", CacheData.size(),
+            CFileUtils::RedactUserFolderFromFilepath(CachePath.string()));
+        
+        return;
+    }
+    
+    // Where scenario 2 actually happens. The cached data was rejected due to reasons like an updated driver or a new GPU from the same vendor.
+    LOG_WARN_TAG("VulkanRHI", "Existing Vulkan pipeline cache data at '{}' was rejected by the driver! Creating a fresh pipeline cache...", 
+            CFileUtils::RedactUserFolderFromFilepath(CachePath.string()));
+    PipelineCacheCreateInfo.initialDataSize = 0;
+    PipelineCacheCreateInfo.pInitialData = nullptr;
+    
+    VK_CHECK_RESULT(m_LogicalDevice.createPipelineCache(PipelineCacheCreateInfo), m_PipelineCache, "Failed to create Vulkan pipeline cache!")
+}
+
+void CVulkanDevice::WritePipelineCacheToDisk() const
+{
+    if (!m_PipelineCache)
+        return;
+    
+    std::vector<uint8_t> CacheData;
+    VK_CHECK_RESULT(m_LogicalDevice.getPipelineCacheData(m_PipelineCache), CacheData, "Failed to retrieve Vulkan pipeline cache data!")
+    
+    if (CacheData.empty())
+    {
+        LOG_DEBUG_TAG("VulkanRHI", "Pipeline cache is empty or could not be queried. Skipping disk serialization...");
+        return;
+    }
+
+    const std::filesystem::path CacheFilePath = GetPipelineCacheFilePath();
+
+    std::ofstream File(CacheFilePath, std::ios::binary);
+    if (!File.is_open())
+    {
+        LOG_DEBUG_TAG("VulkanRHI", "Failed to open pipeline cache file for writing: {}", CacheFilePath.string());
+        return;
+    }
+
+    File.write(reinterpret_cast<const char*>(CacheData.data()), static_cast<std::streamsize>(CacheData.size()));
+    
+    LOG_INFO_TAG("VulkanRHI", "Saved Vulkan pipeline cache to disk ({} bytes).", CacheData.size());
+}
+
+std::string CVulkanDevice::GetPipelineCacheFilePath() const
+{
+    const std::string Filename = "VulkanPipelineCache_" + GetPipelineCacheVendorName(m_DeviceInfo.PhysicalDeviceProperties.vendorID)
+        + "_" + std::to_string(m_DeviceInfo.PhysicalDeviceProperties.deviceID) 
+        + "_" + m_DeviceInfo.DriverVersion + ".vkcache";
+    
+    return std::filesystem::path(CPaths::GetCacheDirectory() / Filename).string();
+}
+
 void CVulkanDevice::InitializeTracyContext(vk::Instance VulkanInstance)
 {
     #ifdef TRACY_ENABLE
@@ -392,6 +487,20 @@ std::string CVulkanDevice::GetVendorNameFromID(uint32 VendorID)
         case 0x5143: return "Qualcomm";
         case 0x8086: return "Intel Corporation";
         default: return "Unknown GPU Vendor";
+    }
+}
+
+std::string CVulkanDevice::GetPipelineCacheVendorName(uint32 VendorID) const
+{
+    switch (VendorID)
+    {
+        case 0x1002: return "AMD";
+        case 0x1010: return "ImgTec";
+        case 0x10DE: return "NVIDIA";
+        case 0x13B5: return "ARM";
+        case 0x5143: return "Qualcomm";
+        case 0x8086: return "Intel";
+        default: return "Unknown";
     }
 }
 

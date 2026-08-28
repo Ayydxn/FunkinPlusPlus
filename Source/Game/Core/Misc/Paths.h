@@ -10,6 +10,7 @@ public:
     static const std::filesystem::path& GetRootDirectory();
     static const std::filesystem::path& GetAssetsDirectory();
     static const std::filesystem::path& GetShadersDirectory();
+    static const std::filesystem::path& GetCacheDirectory();
     static const std::filesystem::path& GetShaderCacheDirectory();
 private:
     static std::filesystem::path GetGameDirectory();
@@ -19,6 +20,7 @@ private:
     inline static std::filesystem::path m_RootDirectory = "";
     inline static std::filesystem::path m_AssetsDirectory = "";
     inline static std::filesystem::path m_ShadersDirectory = "";
+    inline static std::filesystem::path m_CacheDirectory = "";
     inline static std::filesystem::path m_ShaderCacheDirectory = "";
 
     inline static bool bIsInitialized = false;

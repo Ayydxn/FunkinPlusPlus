@@ -143,7 +143,7 @@ CVulkanGraphicsPipeline::CVulkanGraphicsPipeline(const CVulkanContext& VulkanCon
 {
     m_ColorAttachmentFormat = VulkanContext.GetSwapChain()->GetImageFormat();
     
-    CreatePipelineLayoutAndCache();
+    CreatePipelineLayout();
     Invalidate();
 }
 
@@ -151,7 +151,6 @@ CVulkanGraphicsPipeline::~CVulkanGraphicsPipeline()
 {
     m_VulkanDevice.GetLogicalDevice().destroyPipeline(m_Pipeline);
     m_VulkanDevice.GetLogicalDevice().destroyPipelineLayout(m_PipelineLayout);
-    m_VulkanDevice.GetLogicalDevice().destroyPipelineCache(m_PipelineCache);
 }
 
 void CVulkanGraphicsPipeline::Invalidate()
@@ -294,11 +293,11 @@ void CVulkanGraphicsPipeline::Invalidate()
     GraphicsPipelineCreateInfo.pNext = &PipelineRenderingCreateInfo;
     GraphicsPipelineCreateInfo.flags = vk::PipelineCreateFlags();
     
-    VK_CHECK_RESULT(m_VulkanDevice.GetLogicalDevice().createGraphicsPipeline(m_PipelineCache, GraphicsPipelineCreateInfo), m_Pipeline,
+    VK_CHECK_RESULT(m_VulkanDevice.GetLogicalDevice().createGraphicsPipeline(m_VulkanDevice.GetPipelineCache(), GraphicsPipelineCreateInfo), m_Pipeline,
         "Failed to create Vulkan graphics pipeline!")
 }
 
-void CVulkanGraphicsPipeline::CreatePipelineLayoutAndCache()
+void CVulkanGraphicsPipeline::CreatePipelineLayout()
 {
     const vk::Device LogicalDevice = m_VulkanDevice.GetLogicalDevice();
     
@@ -306,10 +305,5 @@ void CVulkanGraphicsPipeline::CreatePipelineLayoutAndCache()
     PipelineLayoutCreateInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
     PipelineLayoutCreateInfo.flags = vk::PipelineLayoutCreateFlags();
     
-    vk::PipelineCacheCreateInfo PipelineCacheCreateInfo = {};
-    PipelineCacheCreateInfo.sType = vk::StructureType::ePipelineCacheCreateInfo;
-    PipelineCacheCreateInfo.flags = vk::PipelineCacheCreateFlags();
-    
     VK_CHECK_RESULT(LogicalDevice.createPipelineLayout(PipelineLayoutCreateInfo), m_PipelineLayout, "Failed to create Vulkan graphics pipeline layout!")
-    VK_CHECK_RESULT(LogicalDevice.createPipelineCache(PipelineCacheCreateInfo), m_PipelineCache, "Failed to create Vulkan graphics pipeline cache!")
 }

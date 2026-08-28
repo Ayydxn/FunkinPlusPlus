@@ -22,6 +22,23 @@ std::string CFileUtils::ReadFile(const std::filesystem::path& Filepath)
     return Contents;
 }
 
+std::vector<uint8_t> CFileUtils::ReadBinaryFile(const std::filesystem::path& FilePath)
+{
+    std::ifstream File(FilePath, std::ios::binary | std::ios::ate);
+    if (!File.is_open())
+        return {};
+
+    const auto FileSize = File.tellg();
+    if (FileSize <= 0)
+        return {};
+
+    std::vector<uint8_t> Buffer(FileSize);
+    File.seekg(0, std::ios::beg);
+    File.read(reinterpret_cast<char*>(Buffer.data()), FileSize);
+    
+    return Buffer;
+}
+
 std::string CFileUtils::RedactUserFolderFromFilepath(const std::filesystem::path& Filepath)
 {
     // Evaluated safely exactly once on the first function call
