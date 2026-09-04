@@ -48,6 +48,8 @@ void CVulkanSwapChain::Resize(uint32 NewWidth, uint32 NewHeight)
     const vk::SwapchainKHR OldSwapChain = m_SwapChain;
     const std::vector<vk::ImageView> OldSwapChainImageViews = m_SwapChainImageViews;
     const std::vector<vk::Semaphore> OldRenderFinishedSemaphores = m_RenderFinishedSemaphores;
+
+	DestroyDepthResources();
     
     const vk::Extent2D NewExtent = { NewWidth, NewHeight };
     CreateSwapChainAndDependents(NewExtent, OldSwapChain);
@@ -71,7 +73,7 @@ FAcquiredFrame CVulkanSwapChain::AcquireNextImage()
     verifyFunkinf(WaitForFencesResult == vk::Result::eSuccess, "Failed to wait for the in-flight fence! ({})", vk::to_string(WaitForFencesResult))
     
     uint32 AcquiredImageIndex = 0;
-    const vk::Result AcquireResult = m_LogicalDevice.acquireNextImageKHR(m_SwapChain, std::numeric_limits<uint64>::max(), ImageAvailableSemaphore,VK_NULL_HANDLE,
+    const vk::Result AcquireResult = m_LogicalDevice.acquireNextImageKHR(m_SwapChain, std::numeric_limits<uint64>::max(), ImageAvailableSemaphore, VK_NULL_HANDLE,
         &AcquiredImageIndex);
     
     // (Ayydxn) We can recover from eErrorOutOfDateKHR/eSuboptimalKHR, so it's up to the caller to handle that. Typically, it'll just be by calling Resize(). 
