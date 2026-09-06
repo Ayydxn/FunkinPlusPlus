@@ -2,6 +2,7 @@
 #include "VulkanContext.h"
 #include "VulkanDebugUtils.h"
 #include "VulkanPlatformUtils.h"
+#include "Utils/MessageBox.h"
 
 #include <SDL3/SDL_vulkan.h>
 
@@ -58,6 +59,16 @@ static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugMessengerCallback(vk::DebugUtilsMes
 
 bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync)
 {
+	if (!SDL_Vulkan_LoadLibrary(nullptr))
+	{
+		LOG_ERROR_TAG("VulkanRHI", "Failed to load the Vulkan loader library! ({})", SDL_GetError());
+
+        CMessageBox::ShowSimple(EMessageBoxType::Error, "Vulkan Initialization Error", "Friday Night Funkin'++ could not find a Vulkan runtime on this system.\n\n"
+            "Please ensure your operating system and GPU drivers are up to date and that Vulkan is supported by your hardware.");
+
+		return false;
+	}
+
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
     
     const auto InstanceExtensions = GetRequiredInstanceExtensions();
@@ -113,7 +124,9 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, u
     if (!ProbeSurface)
         return false;
     
-    m_Device = std::make_unique<CVulkanDevice>(m_Instance, ProbeSurface);
+    m_Device = std::make_unique<CVulkanDevice>();
+    if (!m_Device->Initialize(m_Instance, ProbeSurface))
+        return false;
     
     m_Instance.destroySurfaceKHR(ProbeSurface);
     
@@ -146,6 +159,8 @@ void CVulkanContext::Destroy()
         m_Instance.destroyDebugUtilsMessengerEXT(m_DebugUtilsMessenger);
     
     m_Instance.destroy();
+
+    SDL_Vulkan_UnloadLibrary();
 }
 
 void CVulkanContext::OnWindowResized(uint32 NewWidth, uint32 NewHeight)

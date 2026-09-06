@@ -46,8 +46,9 @@ struct FPresentInfo
 class CVulkanDevice
 {
 public:
-    explicit CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
+    CVulkanDevice() = default;
     
+    bool Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     void Destroy() const;
     
     void WaitIdle() const;
@@ -66,7 +67,7 @@ public:
     vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const;
     tracy::VkCtx* GetTracyContext() const { return m_TracyVulkanContext; }
 private:
-    void SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
+    bool SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     void CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice);
     void FindAndSelectDepthFormat(vk::PhysicalDevice PhysicalDevice);
     void CreateCommandPoolAndCommandBuffers();

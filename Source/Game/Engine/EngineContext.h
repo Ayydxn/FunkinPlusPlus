@@ -22,6 +22,7 @@ public:
     
     static CEngineContext& GetInstance();
 
+	const FNativeWindowHandle& GetNativeWindowHandle() const { return m_NativeWindowHandle; }
     IRHIContext& GetRHIContext() const { return *m_RHIContext; }
     CRenderer& GetRenderer() const { return *m_Renderer; }
     IImGuiRenderer& GetImGuiRenderer() const { return *m_ImGuiRenderer; }
@@ -39,6 +40,7 @@ private:
     IImGuiRenderer* m_ImGuiRenderer;
     
     CEventBroadcaster m_EventBroadcaster;
+    FNativeWindowHandle m_NativeWindowHandle;
     CInputState m_InputState;
     FFrameStats m_FrameStats;
     

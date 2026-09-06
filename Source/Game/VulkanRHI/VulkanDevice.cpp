@@ -6,45 +6,49 @@
 #include "VulkanUtils.h"
 #include "Misc/Paths.h"
 #include "Utils/FileUtils.h"
+#include "Utils/MessageBox.h"
 
 constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
 {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-CVulkanDevice::CVulkanDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
+bool CVulkanDevice::Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
 {
-    /* -- Physical Device Selection -- */
-    SelectPhysicalDevice(VulkanInstance, ProbeSurface);
-    
-    m_QueueFamilyIndices = FindQueueFamilies(m_PhysicalDevice, ProbeSurface);
-    verifyFunkinf(m_QueueFamilyIndices.IsComplete(), "Failed to find a suitable graphics queue family on the selected Vulkan physical device!")
-    
-    m_DeviceInfo = {};
-    m_DeviceInfo.PhysicalDeviceProperties = m_PhysicalDevice.getProperties();
-    m_DeviceInfo.VendorName = GetVendorNameFromID(m_PhysicalDevice.getProperties().vendorID);
-    m_DeviceInfo.DriverVersion = UnpackDriverVersion(m_PhysicalDevice.getProperties().vendorID, m_PhysicalDevice.getProperties().driverVersion);
-    m_DeviceInfo.VulkanAPIVersion = UnpackVulkanAPIVersion(m_PhysicalDevice.getProperties().apiVersion);
-    
-    FindAndSelectDepthFormat(m_PhysicalDevice);
-    
-    LOG_INFO_TAG("VulkanRHI", "Graphics Card Information:");
-    LOG_INFO_TAG("VulkanRHI", "   Device: {}", m_DeviceInfo.PhysicalDeviceProperties.deviceName.data());
-    LOG_INFO_TAG("VulkanRHI", "   Vendor: {}", m_DeviceInfo.VendorName);
-    LOG_INFO_TAG("VulkanRHI", "   Driver Version: {}", m_DeviceInfo.DriverVersion);
-    LOG_INFO_TAG("VulkanRHI", "   Vulkan API Version: {}", m_DeviceInfo.VulkanAPIVersion);
-    
-    /* -- Logical Device Creation -- */
-    CreateLogicalDevice(m_PhysicalDevice);
+	/* -- Physical Device Selection -- */
+	if (!SelectPhysicalDevice(VulkanInstance, ProbeSurface))
+		return false;
+	
+	m_QueueFamilyIndices = FindQueueFamilies(m_PhysicalDevice, ProbeSurface);
+	verifyFunkinf(m_QueueFamilyIndices.IsComplete(), "Failed to find a suitable graphics queue family on the selected Vulkan physical device!")
 
-    m_GraphicsQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.GraphicsFamily.value(), 0);
-    m_PresentQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.PresentFamily.value(), 0);
-    
-    /* -- Other Resources -- */
-    CreateCommandPoolAndCommandBuffers();
-    CreateTransferCommandPool();
-    CreatePipelineCache();
-    InitializeTracyContext(VulkanInstance);
+		m_DeviceInfo = {};
+	m_DeviceInfo.PhysicalDeviceProperties = m_PhysicalDevice.getProperties();
+	m_DeviceInfo.VendorName = GetVendorNameFromID(m_PhysicalDevice.getProperties().vendorID);
+	m_DeviceInfo.DriverVersion = UnpackDriverVersion(m_PhysicalDevice.getProperties().vendorID, m_PhysicalDevice.getProperties().driverVersion);
+	m_DeviceInfo.VulkanAPIVersion = UnpackVulkanAPIVersion(m_PhysicalDevice.getProperties().apiVersion);
+
+	FindAndSelectDepthFormat(m_PhysicalDevice);
+
+	LOG_INFO_TAG("VulkanRHI", "Graphics Card Information:");
+	LOG_INFO_TAG("VulkanRHI", "   Device: {}", m_DeviceInfo.PhysicalDeviceProperties.deviceName.data());
+	LOG_INFO_TAG("VulkanRHI", "   Vendor: {}", m_DeviceInfo.VendorName);
+	LOG_INFO_TAG("VulkanRHI", "   Driver Version: {}", m_DeviceInfo.DriverVersion);
+	LOG_INFO_TAG("VulkanRHI", "   Vulkan API Version: {}", m_DeviceInfo.VulkanAPIVersion);
+
+	/* -- Logical Device Creation -- */
+	CreateLogicalDevice(m_PhysicalDevice);
+
+	m_GraphicsQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.GraphicsFamily.value(), 0);
+	m_PresentQueue = m_LogicalDevice.getQueue(m_QueueFamilyIndices.PresentFamily.value(), 0);
+
+	/* -- Other Resources -- */
+	CreateCommandPoolAndCommandBuffers();
+	CreateTransferCommandPool();
+	CreatePipelineCache();
+	InitializeTracyContext(VulkanInstance);
+
+    return true;
 }
 
 void CVulkanDevice::Destroy() const
@@ -153,7 +157,7 @@ vk::CommandBuffer CVulkanDevice::GetCommandBuffer(uint32 FrameIndex) const
     return m_CommandBuffers[FrameIndex];
 }
 
-void CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
+bool CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
 {
     const auto DeviceEnumerationResult = VulkanInstance.enumeratePhysicalDevices();
     verifyFunkinf(DeviceEnumerationResult.result == vk::Result::eSuccess, "Failed to enumerate Vulkan physical devices! ({})", vk::to_string(DeviceEnumerationResult.result))
@@ -179,12 +183,35 @@ void CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::Surfac
         }
     }
     
-    verifyFunkinf(m_PhysicalDevice != VK_NULL_HANDLE, "Failed to select a Vulkan physical device! No suitable GPUs with Vulkan support were found!")
+	if (!m_PhysicalDevice)
+	{
+		LOG_ERROR_TAG("VulkanRHI", "Failed to select a Vulkan physical device! {} device(s) were enumerated, but none were suitable "
+			"(requires a discrete/integrated GPU supporting Vulkan 1.3 dynamic rendering & synchronization2, presentation, and swapchain support).",
+			AvailablePhysicalDevices.size());
+
+		for (const auto PhysicalDevice : AvailablePhysicalDevices)
+		{
+			const auto PhysicalDeviceProperties = PhysicalDevice.getProperties();
+
+			LOG_ERROR_TAG("VulkanRHI", "   Rejected: '{}' ({}) - Required Extensions: {}, Required Features: {}, Suitable Queue Families: {}",
+				PhysicalDeviceProperties.deviceName.data(), vk::to_string(PhysicalDeviceProperties.deviceType),
+				DoesPhysicalDeviceSupportRequiredExtensions(PhysicalDevice), DoesPhysicalDeviceSupportRequiredFeatures(PhysicalDevice),
+				FindQueueFamilies(PhysicalDevice, ProbeSurface).IsComplete());
+		}
+
+        CMessageBox::ShowSimple(EMessageBoxType::Error, "Vulkan Hardware Compatibility Error",
+            "Friday Night Funkin'++ requires a GPU with Vulkan 1.3 support, and no suitable graphics device was found on this system.\n\n"
+            "Please ensure your operating system and GPU drivers are up to date and that your hardware supports Vulkan 1.3.");
+
+		return false;
+	}
     
     const auto PhysicalDeviceProperties = m_PhysicalDevice.getProperties();
     
     LOG_INFO_TAG("VulkanRHI", "Selected physical device '{}' ({}) as the best candidate out of {} suitable device(s).", PhysicalDeviceProperties.deviceName.data(),
         vk::to_string(PhysicalDeviceProperties.deviceType), SuitablePhysicalDeviceCount);
+
+    return true;
 }
 
 void CVulkanDevice::CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice)

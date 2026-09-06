@@ -5,6 +5,8 @@ bool CEngineContext::Initialize(ERHIBackend RHIBackend, const FNativeWindowHandl
 {
     m_Instance = this;
     
+    m_NativeWindowHandle = NativeWindowHandle;
+
     m_InputState.Initialize(m_EventBroadcaster);
     
     m_RHIContext = CreateRHIContext(RHIBackend);
