@@ -13,16 +13,16 @@ constexpr std::array<const char*, 1> GRequiredPhysicalDeviceExtensions
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-bool CVulkanDevice::Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
+FRHIInitializationResult CVulkanDevice::Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
 {
 	/* -- Physical Device Selection -- */
-	if (!SelectPhysicalDevice(VulkanInstance, ProbeSurface))
-		return false;
+	if (FRHIInitializationResult PhysicalDeviceSelectionResult = SelectPhysicalDevice(VulkanInstance, ProbeSurface))
+	    return PhysicalDeviceSelectionResult;
 	
 	m_QueueFamilyIndices = FindQueueFamilies(m_PhysicalDevice, ProbeSurface);
 	verifyFunkinf(m_QueueFamilyIndices.IsComplete(), "Failed to find a suitable graphics queue family on the selected Vulkan physical device!")
 
-		m_DeviceInfo = {};
+    m_DeviceInfo = {};
 	m_DeviceInfo.PhysicalDeviceProperties = m_PhysicalDevice.getProperties();
 	m_DeviceInfo.VendorName = GetVendorNameFromID(m_PhysicalDevice.getProperties().vendorID);
 	m_DeviceInfo.DriverVersion = UnpackDriverVersion(m_PhysicalDevice.getProperties().vendorID, m_PhysicalDevice.getProperties().driverVersion);
@@ -48,7 +48,7 @@ bool CVulkanDevice::Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR Probe
 	CreatePipelineCache();
 	InitializeTracyContext(VulkanInstance);
 
-    return true;
+    return FRHIInitializationResult::MakeSuccess();
 }
 
 void CVulkanDevice::Destroy() const
@@ -157,7 +157,7 @@ vk::CommandBuffer CVulkanDevice::GetCommandBuffer(uint32 FrameIndex) const
     return m_CommandBuffers[FrameIndex];
 }
 
-bool CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
+FRHIInitializationResult CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface)
 {
     const auto DeviceEnumerationResult = VulkanInstance.enumeratePhysicalDevices();
     verifyFunkinf(DeviceEnumerationResult.result == vk::Result::eSuccess, "Failed to enumerate Vulkan physical devices! ({})", vk::to_string(DeviceEnumerationResult.result))
@@ -198,12 +198,11 @@ bool CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::Surfac
 				DoesPhysicalDeviceSupportRequiredExtensions(PhysicalDevice), DoesPhysicalDeviceSupportRequiredFeatures(PhysicalDevice),
 				FindQueueFamilies(PhysicalDevice, ProbeSurface).IsComplete());
 		}
-
-        CMessageBox::ShowSimple(EMessageBoxType::Error, "Vulkan Hardware Compatibility Error",
+	    
+	    return FRHIInitializationResult::MakeFailure(ERHIInitializationResultCode::NoSuitableAdapter, "Vulkan Hardware Compatibility Error",
             "Friday Night Funkin'++ requires a GPU with Vulkan 1.3 support, and no suitable graphics device was found on this system.\n\n"
-            "Please ensure your operating system and GPU drivers are up to date and that your hardware supports Vulkan 1.3.");
-
-		return false;
+            "Please ensure your operating system and GPU drivers are up to date and that your hardware supports Vulkan 1.3.\n\n"
+            "Check the logs and the Vulkan hardware database (https://vulkan.gpuinfo.org) for more information about your GPU's Vulkan capabilities.");
 	}
     
     const auto PhysicalDeviceProperties = m_PhysicalDevice.getProperties();
@@ -211,7 +210,7 @@ bool CVulkanDevice::SelectPhysicalDevice(vk::Instance VulkanInstance, vk::Surfac
     LOG_INFO_TAG("VulkanRHI", "Selected physical device '{}' ({}) as the best candidate out of {} suitable device(s).", PhysicalDeviceProperties.deviceName.data(),
         vk::to_string(PhysicalDeviceProperties.deviceType), SuitablePhysicalDeviceCount);
 
-    return true;
+    return FRHIInitializationResult::MakeSuccess();
 }
 
 void CVulkanDevice::CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice)

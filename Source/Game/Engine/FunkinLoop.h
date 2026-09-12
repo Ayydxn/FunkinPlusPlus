@@ -28,6 +28,8 @@ private:
     CEngineContext m_EngineContext;
     CApplication m_Application;
     CFramePacer m_FramePacer;
+    
+    ERHIBackend m_SelectedRHIBackend;
 
     CEventBroadcaster::FListenerHandle m_ListenerHandle = 0;
     

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "VulkanIncludes.h"
+#include "RHICore/RHIContext.h"
 
 namespace tracy { class VkCtx; }
 
@@ -48,7 +49,7 @@ class CVulkanDevice
 public:
     CVulkanDevice() = default;
     
-    bool Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
+    FRHIInitializationResult Initialize(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     void Destroy() const;
     
     void WaitIdle() const;
@@ -67,7 +68,7 @@ public:
     vk::CommandBuffer GetCommandBuffer(uint32 FrameIndex) const;
     tracy::VkCtx* GetTracyContext() const { return m_TracyVulkanContext; }
 private:
-    bool SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
+    FRHIInitializationResult SelectPhysicalDevice(vk::Instance VulkanInstance, vk::SurfaceKHR ProbeSurface);
     void CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice);
     void FindAndSelectDepthFormat(vk::PhysicalDevice PhysicalDevice);
     void CreateCommandPoolAndCommandBuffers();

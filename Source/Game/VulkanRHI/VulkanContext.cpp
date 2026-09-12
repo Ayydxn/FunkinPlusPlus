@@ -57,16 +57,15 @@ static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugMessengerCallback(vk::DebugUtilsMes
     return vk::False;
 }
 
-bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync)
+FRHIInitializationResult CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync)
 {
 	if (!SDL_Vulkan_LoadLibrary(nullptr))
 	{
 		LOG_ERROR_TAG("VulkanRHI", "Failed to load the Vulkan loader library! ({})", SDL_GetError());
-
-        CMessageBox::ShowSimple(EMessageBoxType::Error, "Vulkan Initialization Error", "Friday Night Funkin'++ could not find a Vulkan runtime on this system.\n\n"
-            "Please ensure your operating system and GPU drivers are up to date and that Vulkan is supported by your hardware.");
-
-		return false;
+	    
+	    return FRHIInitializationResult::MakeFailure(ERHIInitializationResultCode::NoBackendAvailable, "Vulkan Initialization Error",
+	        "Friday Night Funkin'++ could not find a Vulkan runtime on this system.\n\n"
+	        "Please ensure your operating system and GPU drivers are up to date and that Vulkan is supported by your hardware.");
 	}
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
@@ -122,11 +121,16 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, u
     // (Ayydxn) A temporary surface that is used only during physical device selection so surface presentation support can be queried.
     const vk::SurfaceKHR ProbeSurface = CVulkanPlatformUtils::CreateSurface(m_Instance, NativeWindowHandle);
     if (!ProbeSurface)
-        return false;
+    {
+        return FRHIInitializationResult::MakeFailure(ERHIInitializationResultCode::MissingFeature, "Vulkan Initialization Error",
+            "Friday Night Funkin'++ failed to create a Vulkan presentation surface.\n\n"
+            "Please ensure your operating system and GPU drivers are up to date and that your hardware supports Vulkan surface presentation.");
+    }
     
     m_Device = std::make_unique<CVulkanDevice>();
-    if (!m_Device->Initialize(m_Instance, ProbeSurface))
-        return false;
+    
+    if (FRHIInitializationResult DeviceInitializationResult = m_Device->Initialize(m_Instance, ProbeSurface))
+        return DeviceInitializationResult;
     
     m_Instance.destroySurfaceKHR(ProbeSurface);
     
@@ -139,7 +143,7 @@ bool CVulkanContext::Initialize(const FNativeWindowHandle& NativeWindowHandle, u
     m_SwapChain = std::make_unique<CVulkanSwapChain>(*m_Device, *m_MemoryAllocator, m_Instance, NativeWindowHandle, InitialExtent, DefaultFramesInFlight,
         bRequestVSync);
     
-    return true;
+    return FRHIInitializationResult::MakeSuccess();
 }
 
 void CVulkanContext::Destroy()

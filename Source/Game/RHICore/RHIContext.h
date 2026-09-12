@@ -13,6 +13,42 @@ enum class ERHIBackend
     Metal
 };
 
+enum class ERHIInitializationResultCode
+{
+    Success,
+
+	NoBackendAvailable,     // The graphics API/runtime (e.g. the Vulkan loader) isn't present on this system.
+	NoSuitableAdapter,      // No physical device/adapter met the RHI's minimum requirements.
+	MissingFeature          // A physical device/adapter was found, but it lacks a required feature or extension.
+};
+
+struct FRHIInitializationResult
+{
+	ERHIInitializationResultCode ResultCode;
+    std::string ErrorTitle;
+	std::string ErrorMessage;
+    
+    explicit operator bool() const { return ResultCode != ERHIInitializationResultCode::Success; }
+
+    static FRHIInitializationResult MakeSuccess()
+    {
+		return {
+            .ResultCode = ERHIInitializationResultCode::Success,
+            .ErrorTitle = "",
+            .ErrorMessage = ""
+        };
+    }
+    
+    static FRHIInitializationResult MakeFailure(ERHIInitializationResultCode ResultCode, const std::string& ErrorTitle, const std::string& ErrorMessage)
+    {
+        return {
+            .ResultCode = ResultCode,
+            .ErrorTitle = ErrorTitle,
+            .ErrorMessage = ErrorMessage
+        };
+    }
+};
+
 class IRHIContext
 {
 public:
@@ -20,8 +56,8 @@ public:
     
     IRHIContext(const IRHIContext&) = delete;
     IRHIContext& operator=(const IRHIContext&) = delete;
-    
-    virtual bool Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) = 0;
+
+    virtual FRHIInitializationResult Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) = 0;
     virtual void Destroy() = 0;
     
     virtual void OnWindowResized(uint32 NewWidth, uint32 NewHeight) = 0;

@@ -1,5 +1,6 @@
 ﻿#include "FunkinPCH.h"
 #include "EngineContext.h"
+#include "Utils/MessageBox.h"
 
 bool CEngineContext::Initialize(ERHIBackend RHIBackend, const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync)
 {
@@ -10,8 +11,14 @@ bool CEngineContext::Initialize(ERHIBackend RHIBackend, const FNativeWindowHandl
     m_InputState.Initialize(m_EventBroadcaster);
     
     m_RHIContext = CreateRHIContext(RHIBackend);
-    if (!m_RHIContext->Initialize(NativeWindowHandle, InitialWindowWidth, InitialWindowHeight, bRequestVSync))
-        return false;
+    
+    if (const FRHIInitializationResult ContextInitializationResult = m_RHIContext->Initialize(NativeWindowHandle, InitialWindowWidth, InitialWindowHeight, bRequestVSync))
+    {
+        CMessageBox::Show(EMessageBoxType::Error, ContextInitializationResult.ErrorTitle, ContextInitializationResult.ErrorMessage, { "OK" },
+            NativeWindowHandle.SDLWindow);
+    	
+    	return false;
+    }
     
     m_DynamicRHI = CreateDynamicRHI(RHIBackend, *m_RHIContext);
     

@@ -24,11 +24,13 @@ bool CFunkinLoop::Initialize()
     
     CPaths::Initialize();
     
+    m_SelectedRHIBackend = ResolveRHIBackend();
+    
     const auto MainWindowWidth = m_Application.GetWindow().GetWidth();
     const auto MainWindowHeight = m_Application.GetWindow().GetHeight();
     const bool bWasVSyncRequested = m_Application.GetWindow().WantsVSync();
     
-    if (!m_EngineContext.Initialize(ResolveRHIBackend(), m_Application.GetWindow().GetNativeHandle(), MainWindowWidth, MainWindowHeight, bWasVSyncRequested))
+    if (!m_EngineContext.Initialize(m_SelectedRHIBackend, m_Application.GetWindow().GetNativeHandle(), MainWindowWidth, MainWindowHeight, bWasVSyncRequested))
         return false;
     
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
@@ -69,8 +71,8 @@ bool CFunkinLoop::Initialize()
     IndexBufferDescription.InitialData = Indices;
     IndexBufferDescription.SizeInBytes = sizeof(Indices);
     
-    m_VertexBuffer = CreateVertexBuffer(ResolveRHIBackend(), m_EngineContext.GetRHIContext(), VertexBufferDescription);
-    m_IndexBuffer = CreateIndexBuffer(ResolveRHIBackend(), m_EngineContext.GetRHIContext(), IndexBufferDescription);
+    m_VertexBuffer = CreateVertexBuffer(m_SelectedRHIBackend, m_EngineContext.GetRHIContext(), VertexBufferDescription);
+    m_IndexBuffer = CreateIndexBuffer(m_SelectedRHIBackend, m_EngineContext.GetRHIContext(), IndexBufferDescription);
     
     /* -- TEMPORARY: Triangle rendering test -- */
     

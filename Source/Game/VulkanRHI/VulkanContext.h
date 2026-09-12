@@ -12,7 +12,7 @@ public:
     CVulkanContext() = default;
     ~CVulkanContext() override = default;
     
-    bool Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) override;
+    FRHIInitializationResult Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) override;
     void Destroy() override;
     
     void OnWindowResized(uint32 NewWidth, uint32 NewHeight) override;
