@@ -2,7 +2,6 @@
 #include "VulkanImGuiRenderer.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanDebugUtils.h"
-#include "ImGui/ImGuiCommon.h"
 
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -12,7 +11,7 @@ CVulkanImGuiRenderer::CVulkanImGuiRenderer(CVulkanContext& VulkanContext)
 
 void CVulkanImGuiRenderer::Initialize(const FNativeWindowHandle& NativeWindowHandle)
 {
-    CImGuiCommon::CreateContext();
+    CreateContext();
     
     CreateDescriptorPool();
     
@@ -60,7 +59,7 @@ void CVulkanImGuiRenderer::Shutdown()
     
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
-    CImGuiCommon::DestroyContext();
+    DestroyContext();
     
     m_VulkanContext.GetDevice().GetLogicalDevice().destroyDescriptorPool(m_DescriptorPool);
 }

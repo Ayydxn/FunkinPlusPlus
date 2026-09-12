@@ -11,6 +11,9 @@ public:
     IImGuiRenderer(const IImGuiRenderer&) = delete;
     IImGuiRenderer& operator=(const IImGuiRenderer&) = delete;
     
+    void CreateContext();
+    void DestroyContext();
+    
     virtual void Initialize(const FNativeWindowHandle& NativeWindowHandle) = 0;
     virtual void Shutdown() = 0;
     
