@@ -104,19 +104,6 @@ void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::st
         if (SLANG_FAILED(Result))
             return;
     }
-    
-    // Reflect the whole composed program (every stage/entry point) in one pass, while ComposedProgram is still alive.
-    // We have to do this now since ProgramLayout is owned by the IComponentType it came from and doesn't outlive it.
-    {
-        Slang::ComPtr<slang::IBlob> DiagnosticsBlob;
-        
-        slang::ProgramLayout* ProgramLayout = ComposedProgram->getLayout(0, DiagnosticsBlob.writeRef());
-        
-        DiagnoseIfNeeded(DiagnosticsBlob);
-        
-        if (ProgramLayout)
-            OutputReflectionData = CShaderReflection::Extract(ProgramLayout);
-    }
 
     // Retrieve and store the SPIR-V bytecode for each entry point
     for (uint32 i = 0; i < EntryPointCount; i++)
@@ -146,6 +133,19 @@ void CShaderCompiler::CompileShader(const std::string& ShaderName, const std::st
 
             CompilationOutput[CompiledShaderStage.ShaderStage] = std::move(CompiledShaderStage);
         }
+    }
+    
+    // Reflect the whole composed program (every stage/entry point) in one pass, while ComposedProgram is still alive.
+    // We have to do this now since ProgramLayout is owned by the IComponentType it came from and doesn't outlive it.
+    {
+        Slang::ComPtr<slang::IBlob> DiagnosticsBlob;
+        
+        slang::ProgramLayout* ProgramLayout = ComposedProgram->getLayout(0, DiagnosticsBlob.writeRef());
+        
+        DiagnoseIfNeeded(DiagnosticsBlob);
+        
+        if (ProgramLayout)
+            OutputReflectionData = CShaderReflection::Extract(ComposedProgram, ProgramLayout);
     }
     
     CShaderReflection::LogShaderReflectionData(ShaderName, OutputReflectionData);

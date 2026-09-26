@@ -1,6 +1,8 @@
 #include "FunkinPCH.h"
 #include "ShaderReflection.h"
 
+#include <slang-com-ptr.h>
+
 namespace
 {
     std::string ShaderResourceTypeToString(const EShaderResourceType Type)
@@ -38,11 +40,20 @@ namespace
     }
 }
 
-FShaderReflectionData CShaderReflection::Extract(slang::ProgramLayout* ProgramLayout)
+FShaderReflectionData CShaderReflection::Extract(slang::IComponentType* ComposedProgram, slang::ProgramLayout* ProgramLayout)
 {
     verifyFunkinf(ProgramLayout, "Attempted to extract shader reflection data from a null ProgramLayout!")
 
     FShaderReflectionData ExtractedReflectionData;
+    
+    const uint32 GlobalParameterCount = ProgramLayout->getParameterCount();
+    for (uint32 ParamIndex = 0; ParamIndex < GlobalParameterCount; ++ParamIndex)
+    {
+        slang::VariableLayoutReflection* Parameter = ProgramLayout->getParameterByIndex(ParamIndex);
+        const EShaderStage UsedStageFlags = GetActualUsageStageFlags(ComposedProgram, ProgramLayout, Parameter);
+
+        ExtractParameter(Parameter, UsedStageFlags, ExtractedReflectionData);
+    }
 
     const SlangInt32 EntryPointCount = static_cast<SlangInt32>(ProgramLayout->getEntryPointCount());
     for (SlangInt32 EntryPointIndex = 0; EntryPointIndex < EntryPointCount; ++EntryPointIndex)
@@ -149,8 +160,51 @@ void CShaderReflection::ExtractEntryPointPushConstants(slang::EntryPointLayout* 
     }
 }
 
+EShaderStage CShaderReflection::GetActualUsageStageFlags(slang::IComponentType* ComposedProgram, slang::ProgramLayout* ProgramLayout,
+    slang::VariableLayoutReflection* GlobalParameter)
+{
+    EShaderStage UsedStageFlags = EShaderStage::None;
+
+    const auto Category = static_cast<SlangParameterCategory>(GlobalParameter->getCategory());
+    const SlangInt32 EntryPointCount = static_cast<SlangInt32>(ProgramLayout->getEntryPointCount());
+
+    for (SlangInt32 EntryPointIndex = 0; EntryPointIndex < EntryPointCount; ++EntryPointIndex)
+    {
+        slang::EntryPointLayout* EntryPoint = ProgramLayout->getEntryPointByIndex(EntryPointIndex);
+
+        Slang::ComPtr<slang::IBlob> DiagnosticsBlob;
+        Slang::ComPtr<slang::IMetadata> Metadata;
+        
+        const SlangResult Result = ComposedProgram->getEntryPointMetadata(EntryPointIndex, 0, Metadata.writeRef(), DiagnosticsBlob.writeRef());
+        if (SLANG_FAILED(Result) || !Metadata)
+            continue;
+
+        bool bIsUsed = false;
+        const SlangResult UsageQueryResult = Metadata->isParameterLocationUsed(Category, GlobalParameter->getBindingSpace(), GlobalParameter->getBindingIndex(),
+            bIsUsed);
+
+        if (SLANG_SUCCEEDED(UsageQueryResult) && bIsUsed)
+            UsedStageFlags |= GetShaderStageFlagFromSlangStage(EntryPoint->getStage());
+    }
+
+    // If the metadata query failed outright for every entry point (rather than just reporting "unused"), fall back
+    // to treating the resource as used by every stage instead of silently dropping it from all of them.
+    if (UsedStageFlags == EShaderStage::None)
+    {
+        for (SlangInt32 EntryPointIndex = 0; EntryPointIndex < EntryPointCount; ++EntryPointIndex)
+            UsedStageFlags |= GetShaderStageFlagFromSlangStage(ProgramLayout->getEntryPointByIndex(EntryPointIndex)->getStage());
+    }
+
+    return UsedStageFlags;
+}
+
 EShaderResourceType CShaderReflection::GetResourceTypeFromCategory(slang::TypeLayoutReflection* TypeLayout)
 {
+    // Arrays of resources report a kind of array at the top level with the actual resource kind living on the element type layout.
+    // So, we unwrap any nesting (in case of multidimensional arrays) before inspecting the kind below.
+    while (TypeLayout->getKind() == slang::TypeReflection::Kind::Array)
+        TypeLayout = TypeLayout->getElementTypeLayout();
+    
     switch (TypeLayout->getKind())
     {
         case slang::TypeReflection::Kind::ConstantBuffer: return EShaderResourceType::UniformBuffer;
