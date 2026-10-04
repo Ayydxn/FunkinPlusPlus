@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "VulkanDescriptorAllocator.h"
 #include "VulkanDevice.h"
 #include "VulkanMemoryAllocator.h"
 #include "VulkanSwapChain.h"
@@ -21,6 +22,7 @@ public:
     CVulkanDevice& GetDevice() const { return *m_Device; }
     CVulkanMemoryAllocator& GetMemoryAllocator() const { return *m_MemoryAllocator; }
     std::shared_ptr<CVulkanSwapChain> GetSwapChain() const { return m_SwapChain; }
+    CVulkanDescriptorAllocator& GetDescriptorAllocator() const { return *m_DescriptorAllocator; }
 public:
     // TODO: (Ayydxn) Once game settings exist, read this from there instead of hardcoding it.
     static constexpr uint32 DefaultFramesInFlight = 3;
@@ -35,6 +37,7 @@ private:
     std::unique_ptr<CVulkanDevice> m_Device;
     std::unique_ptr<CVulkanMemoryAllocator> m_MemoryAllocator;
     std::shared_ptr<CVulkanSwapChain> m_SwapChain;
+    std::unique_ptr<CVulkanDescriptorAllocator> m_DescriptorAllocator;
     
     vk::Instance m_Instance;
     vk::DebugUtilsMessengerEXT m_DebugUtilsMessenger;

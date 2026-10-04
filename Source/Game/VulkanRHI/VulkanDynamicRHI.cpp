@@ -30,6 +30,8 @@ bool CVulkanDynamicRHI::BeginFrame()
     
     m_CurrentlyAcquiredFrame = AcquiredFrame;
     
+    m_VulkanContext.GetDescriptorAllocator().Reset(AcquiredFrame.FrameIndex);
+    
     const vk::CommandBuffer CommandBuffer = GetCurrentVulkanCommandBuffer()->GetHandle();
     VK_CHECK_RESULT_VOID(CommandBuffer.reset(), "Failed to reset the Vulkan command buffer!")
     

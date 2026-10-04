@@ -143,12 +143,16 @@ FRHIInitializationResult CVulkanContext::Initialize(const FNativeWindowHandle& N
     m_SwapChain = std::make_unique<CVulkanSwapChain>(*m_Device, *m_MemoryAllocator, m_Instance, NativeWindowHandle, InitialExtent, DefaultFramesInFlight,
         bRequestVSync);
     
+    m_DescriptorAllocator = std::make_unique<CVulkanDescriptorAllocator>(*m_Device, DefaultFramesInFlight);
+    
     return FRHIInitializationResult::MakeSuccess();
 }
 
 void CVulkanContext::Destroy()
 {
     m_Device->WaitIdle();
+    
+    m_DescriptorAllocator.reset();
     
     m_SwapChain->Destroy(m_Instance);
     m_SwapChain.reset();
