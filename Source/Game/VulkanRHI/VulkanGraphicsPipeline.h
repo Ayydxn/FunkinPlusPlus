@@ -16,9 +16,13 @@ public:
     vk::PipelineLayout GetLayout() const { return m_PipelineLayout; }
 private:
     void CreatePipelineLayout();
+    
+    void DestroyDescriptorSetLayouts();
 private:
     CVulkanDevice& m_VulkanDevice;
     const FGraphicsPipelineDescription& m_GraphicsPipelineDescription;
+    
+    std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
     
     vk::Format m_ColorAttachmentFormat;
     vk::PipelineLayout m_PipelineLayout;

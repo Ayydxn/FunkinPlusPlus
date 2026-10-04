@@ -5,6 +5,38 @@
 
 namespace
 {
+    vk::DescriptorType GetVulkanDescriptorType(EShaderResourceType ResourceType)
+    {
+        switch (ResourceType)
+        {
+            case EShaderResourceType::UniformBuffer:        return vk::DescriptorType::eUniformBuffer;
+            case EShaderResourceType::StorageBuffer:        return vk::DescriptorType::eStorageBuffer;
+            case EShaderResourceType::Sampler:              return vk::DescriptorType::eSampler;
+            case EShaderResourceType::CombinedImageSampler: return vk::DescriptorType::eCombinedImageSampler;
+            case EShaderResourceType::SampledImage:         return vk::DescriptorType::eSampledImage;
+            case EShaderResourceType::StorageImage:         return vk::DescriptorType::eStorageImage;
+        }
+        
+        verifyFunkinf(false, "Failed to get Vulkan descriptor type for unknown shader resource type!")
+        return vk::DescriptorType::eUniformBuffer;
+    }
+    
+    vk::ShaderStageFlags GetVulkanShaderStageFlags(EShaderStage ShaderStageFlags)
+    {
+        vk::ShaderStageFlags Result;
+        
+        if (HasShaderStageFlag(ShaderStageFlags, EShaderStage::Vertex))
+            Result |= vk::ShaderStageFlagBits::eVertex;
+        
+        if (HasShaderStageFlag(ShaderStageFlags, EShaderStage::Fragment))
+            Result |= vk::ShaderStageFlagBits::eFragment;
+        
+        if (HasShaderStageFlag(ShaderStageFlags, EShaderStage::Compute))
+            Result |= vk::ShaderStageFlagBits::eCompute;
+        
+        return Result;
+    }
+    
     vk::Format GetShaderDataTypeVulkanFormat(EShaderDataType DataType)
     {
         switch (DataType)
@@ -151,6 +183,8 @@ CVulkanGraphicsPipeline::~CVulkanGraphicsPipeline()
 {
     m_VulkanDevice.GetLogicalDevice().destroyPipeline(m_Pipeline);
     m_VulkanDevice.GetLogicalDevice().destroyPipelineLayout(m_PipelineLayout);
+    
+    DestroyDescriptorSetLayouts();
 }
 
 void CVulkanGraphicsPipeline::Invalidate()
@@ -301,9 +335,92 @@ void CVulkanGraphicsPipeline::CreatePipelineLayout()
 {
     const vk::Device LogicalDevice = m_VulkanDevice.GetLogicalDevice();
     
+    const auto VulkanShader = std::dynamic_pointer_cast<CVulkanShader>(m_GraphicsPipelineDescription.Shader);
+    verifyFunkinf(VulkanShader, "Failed to create Vulkan graphics pipeline layout! Shader is not a valid Vulkan shader instance!")
+    
+    const FShaderReflectionData& ShaderReflectionData = VulkanShader->GetReflectionData();
+    std::map<uint32, std::vector<vk::DescriptorSetLayoutBinding>> BindingsBySet;
+    
+    for (const FShaderReflectedResource& ShaderReflectedResource : ShaderReflectionData.Resources)
+    {
+        vk::DescriptorSetLayoutBinding DescriptorSetLayoutBinding = {};
+        DescriptorSetLayoutBinding.binding = ShaderReflectedResource.Binding;
+        DescriptorSetLayoutBinding.descriptorType = GetVulkanDescriptorType(ShaderReflectedResource.Type);
+        DescriptorSetLayoutBinding.descriptorCount = 1;
+        DescriptorSetLayoutBinding.stageFlags = GetVulkanShaderStageFlags(ShaderReflectedResource.StageFlags);
+        
+        BindingsBySet[ShaderReflectedResource.Set].push_back(DescriptorSetLayoutBinding);
+    }
+    
+    // Sets must be created contiguously from 0 for VkPipelineLayoutCreateInfo::pSetLayouts.
+    // So, any gap in reflected set numbers (e.g. Set 0 and Set 2 used, Set 1 not) is filled with an empty layout rather than left out.
+    const uint32 SetCount = BindingsBySet.empty() ? 0 : (BindingsBySet.rbegin()->first + 1);
+    m_DescriptorSetLayouts.reserve(SetCount);
+    
+    for (uint32 SetIndex = 0; SetIndex < SetCount; ++SetIndex)
+    {
+        const std::vector<vk::DescriptorSetLayoutBinding>& SetBindings = BindingsBySet[SetIndex];
+        
+        vk::DescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {};
+        DescriptorSetLayoutCreateInfo.sType = vk::StructureType::eDescriptorSetLayoutCreateInfo;
+        DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32>(SetBindings.size());
+        DescriptorSetLayoutCreateInfo.pBindings = SetBindings.data();
+        DescriptorSetLayoutCreateInfo.flags = vk::DescriptorSetLayoutCreateFlags();
+        
+        vk::DescriptorSetLayout DescriptorSetLayout;
+        VK_CHECK_RESULT(LogicalDevice.createDescriptorSetLayout(DescriptorSetLayoutCreateInfo), DescriptorSetLayout,
+            "Failed to create Vulkan descriptor set layout for set {} of shader '{}'!", SetIndex, VulkanShader->GetName())
+        
+        m_DescriptorSetLayouts.push_back(DescriptorSetLayout);
+    }
+    
+    // Slang scopes each push-constant block to the entry point/stage it was declared in, so the same logical push-constant
+    // range (matching offset) can show up once per stage that uses it. Vulkan wants one VkPushConstantRange per byte range,
+    // with a single stage mask covering every stage that touches it - so ranges sharing an offset+size are merged here.
+    std::vector<vk::PushConstantRange> PushConstantRanges;
+    
+    for (const FShaderReflectedPushConstant& PushConstant : ShaderReflectionData.PushConstants)
+    {
+        bool bMergedIntoExisting = false;
+        
+        for (vk::PushConstantRange& ExistingRange : PushConstantRanges)
+        {
+            if (ExistingRange.offset == PushConstant.Offset && ExistingRange.size == PushConstant.Size)
+            {
+                ExistingRange.stageFlags |= GetVulkanShaderStageFlags(PushConstant.StageFlags);
+                bMergedIntoExisting = true;
+                break;
+            }
+        }
+        
+        if (bMergedIntoExisting)
+            continue;
+        
+        vk::PushConstantRange PushConstantRange = {};
+        PushConstantRange.stageFlags = GetVulkanShaderStageFlags(PushConstant.StageFlags);
+        PushConstantRange.offset = PushConstant.Offset;
+        PushConstantRange.size = PushConstant.Size;
+        
+        PushConstantRanges.push_back(PushConstantRange);
+    }
+    
     vk::PipelineLayoutCreateInfo PipelineLayoutCreateInfo = {};
     PipelineLayoutCreateInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
+    PipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32>(m_DescriptorSetLayouts.size());
+    PipelineLayoutCreateInfo.pSetLayouts = m_DescriptorSetLayouts.data();
+    PipelineLayoutCreateInfo.pushConstantRangeCount = static_cast<uint32>(PushConstantRanges.size());
+    PipelineLayoutCreateInfo.pPushConstantRanges = PushConstantRanges.data();
     PipelineLayoutCreateInfo.flags = vk::PipelineLayoutCreateFlags();
     
     VK_CHECK_RESULT(LogicalDevice.createPipelineLayout(PipelineLayoutCreateInfo), m_PipelineLayout, "Failed to create Vulkan graphics pipeline layout!")
+}
+
+void CVulkanGraphicsPipeline::DestroyDescriptorSetLayouts()
+{
+    const vk::Device LogicalDevice = m_VulkanDevice.GetLogicalDevice();
+    
+    for (const vk::DescriptorSetLayout DescriptorSetLayout : m_DescriptorSetLayouts)
+        LogicalDevice.destroyDescriptorSetLayout(DescriptorSetLayout);
+    
+    m_DescriptorSetLayouts.clear();
 }
