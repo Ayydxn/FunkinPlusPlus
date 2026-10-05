@@ -2,6 +2,7 @@
 
 #include "IndexBuffer.h"
 #include "RHIContext.h"
+#include "UniformBuffer.h"
 #include "RHICore/CommandBuffer.h"
 #include "RHICore/GraphicsPipeline.h"
 
@@ -19,6 +20,7 @@ public:
     virtual void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) = 0;
     virtual void BindVertexBuffer(const IVertexBuffer& VertexBuffer) = 0;
     virtual void BindIndexBuffer(const IIndexBuffer& IndexBuffer) = 0;
+    virtual void BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuffer& UniformBuffer) = 0;
     
     virtual void Draw(uint32 VertexCount, uint32 InstanceCount) = 0;
     virtual void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) = 0;

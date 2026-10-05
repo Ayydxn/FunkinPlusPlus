@@ -4,6 +4,7 @@
 #include "VulkanDebugUtils.h"
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanIndexBuffer.h"
+#include "VulkanUniformBuffer.h"
 #include "VulkanUtils.h"
 #include "VulkanVertexBuffer.h"
 
@@ -151,6 +152,34 @@ void CVulkanDynamicRHI::EndFrame()
     SwapChain->AdvanceFrame();
 }
 
+void CVulkanDynamicRHI::BindPipeline(const IGraphicsPipeline& GraphicsPipeline)
+{
+    const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
+    if (!VulkanCommandBuffer)
+        return;
+    
+    const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
+    
+    const auto& VulkanPipeline = dynamic_cast<const CVulkanGraphicsPipeline&>(GraphicsPipeline);
+    m_CurrentlyBoundPipeline = &VulkanPipeline;
+    
+    const vk::Extent2D& SwapChainExtent = m_VulkanContext.GetSwapChain()->GetExtent();
+    
+    vk::Viewport Viewport;
+    Viewport.x = 0.0f;
+    Viewport.y = 0.0f;
+    Viewport.width = static_cast<float>(SwapChainExtent.width);
+    Viewport.height = static_cast<float>(SwapChainExtent.height);
+    Viewport.minDepth = 0.0f;
+    Viewport.maxDepth = 1.0f;
+    
+    FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
+    
+    CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanPipeline.GetHandle());
+    CommandBuffer.setViewport(0, Viewport);
+    CommandBuffer.setScissor(0, vk::Rect2D({ 0, 0 }, SwapChainExtent));
+}
+
 void CVulkanDynamicRHI::BindVertexBuffer(const IVertexBuffer& VertexBuffer)
 {
     const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
@@ -180,31 +209,49 @@ void CVulkanDynamicRHI::BindIndexBuffer(const IIndexBuffer& IndexBuffer)
     CommandBuffer.bindIndexBuffer(VulkanIndexBuffer, 0, vk::IndexType::eUint32);
 }
 
-void CVulkanDynamicRHI::BindPipeline(const IGraphicsPipeline& GraphicsPipeline)
+void CVulkanDynamicRHI::BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuffer& UniformBuffer)
 {
     const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
     if (!VulkanCommandBuffer)
         return;
     
+    verifyFunkinf(m_CurrentlyBoundPipeline, "Failed to bind uniform buffer! BindUniformBuffer() was called before BindPipeline() this frame!")
+    if (!m_CurrentlyBoundPipeline)
+        return;
+    
+    const vk::DescriptorSetLayout DescriptorSetLayout = m_CurrentlyBoundPipeline->GetDescriptorSetLayout(Set);
+    verifyFunkinf(DescriptorSetLayout, "Failed to bind uniform buffer! The currently bound pipeline has no descriptor set layout for set {}!", Set)
+    if (!DescriptorSetLayout)
+        return;
+    
+    if (!m_CurrentlyAcquiredFrame.has_value())
+        return;
+    
+    const uint32 FrameIndex = m_CurrentlyAcquiredFrame->FrameIndex;
+    const vk::DescriptorSet DescriptorSet = m_VulkanContext.GetDescriptorAllocator().Allocate(FrameIndex, DescriptorSetLayout);
+    
+    const vk::Buffer VulkanUniformBuffer = dynamic_cast<const CVulkanUniformBuffer&>(UniformBuffer).GetHandle();
+    
+    vk::DescriptorBufferInfo DescriptorBufferInfo;
+    DescriptorBufferInfo.buffer = VulkanUniformBuffer;
+    DescriptorBufferInfo.offset = 0;
+    DescriptorBufferInfo.range = UniformBuffer.GetSizeInBytes();
+    
+    vk::WriteDescriptorSet WriteDescriptorSet = {};
+    WriteDescriptorSet.sType = vk::StructureType::eWriteDescriptorSet;
+    WriteDescriptorSet.dstSet = DescriptorSet;
+    WriteDescriptorSet.dstBinding = Binding;
+    WriteDescriptorSet.descriptorCount = 1;
+    WriteDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
+    
+    m_VulkanContext.GetDevice().GetLogicalDevice().updateDescriptorSets(WriteDescriptorSet, {});
+    
     const vk::CommandBuffer CommandBuffer = VulkanCommandBuffer->GetHandle();
-    
-    const auto& VulkanPipeline = dynamic_cast<const CVulkanGraphicsPipeline&>(GraphicsPipeline);
-    
-    const vk::Extent2D& SwapChainExtent = m_VulkanContext.GetSwapChain()->GetExtent();
-    
-    vk::Viewport Viewport;
-    Viewport.x = 0.0f;
-    Viewport.y = 0.0f;
-    Viewport.width = static_cast<float>(SwapChainExtent.width);
-    Viewport.height = static_cast<float>(SwapChainExtent.height);
-    Viewport.minDepth = 0.0f;
-    Viewport.maxDepth = 1.0f;
     
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     
-    CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, VulkanPipeline.GetHandle());
-    CommandBuffer.setViewport(0, Viewport);
-    CommandBuffer.setScissor(0, vk::Rect2D({ 0, 0 }, SwapChainExtent));
+    CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_CurrentlyBoundPipeline->GetLayout(), Set, DescriptorSet, {});
 }
 
 void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)

@@ -22,6 +22,7 @@ public:
     void BindPipeline(const IGraphicsPipeline& GraphicsPipeline) const;
     void BindVertexBuffer(const IVertexBuffer& VertexBuffer) const;
     void BindIndexBuffer(const IIndexBuffer& IndexBuffer) const;
+    void BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuffer& UniformBuffer) const;
     
     void Draw(uint32 VertexCount, uint32 InstanceCount) const;
     void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) const;

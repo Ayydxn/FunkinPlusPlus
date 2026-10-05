@@ -14,6 +14,11 @@ public:
 
     vk::Pipeline GetHandle() const { return m_Pipeline; }
     vk::PipelineLayout GetLayout() const { return m_PipelineLayout; }
+    
+    vk::DescriptorSetLayout GetDescriptorSetLayout(uint32 SetIndex) const
+    {
+        return SetIndex < m_DescriptorSetLayouts.size() ? m_DescriptorSetLayouts[SetIndex] : VK_NULL_HANDLE;
+    }
 private:
     void CreatePipelineLayout();
     
