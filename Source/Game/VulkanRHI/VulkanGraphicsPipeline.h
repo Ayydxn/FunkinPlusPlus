@@ -25,7 +25,7 @@ private:
     void DestroyDescriptorSetLayouts();
 private:
     CVulkanDevice& m_VulkanDevice;
-    const FGraphicsPipelineDescription& m_GraphicsPipelineDescription;
+    FGraphicsPipelineDescription m_GraphicsPipelineDescription;
     
     std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
     

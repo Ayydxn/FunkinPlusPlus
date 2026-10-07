@@ -95,6 +95,11 @@ void CFunkinLoop::Shutdown()
 {
     LOG_INFO_TAG("Core", "Shutting down...");
     
+    // Wait for the GPU to finish executing all submitted work before destroying any resources.
+    // Although a device wait idle is done within the call stack of CEngineContext::Shutdown(), we do it here as well to ensure that any resources destroyed in response to
+    // anything before it are not still in use by the GPU.
+    m_EngineContext.GetRHIContext().WaitIdle();
+    
     FEngineDelegates::ShutdownDelegate.Broadcast();
     
     m_EngineContext.GetEventBroadcaster().RemoveListener(m_ListenerHandle);

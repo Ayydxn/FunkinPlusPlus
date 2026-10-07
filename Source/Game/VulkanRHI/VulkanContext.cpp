@@ -171,6 +171,11 @@ void CVulkanContext::Destroy()
     SDL_Vulkan_UnloadLibrary();
 }
 
+void CVulkanContext::WaitIdle()
+{
+    m_Device->WaitIdle();
+}
+
 void CVulkanContext::OnWindowResized(uint32 NewWidth, uint32 NewHeight)
 {
     m_SwapChain->Resize(NewWidth, NewHeight);

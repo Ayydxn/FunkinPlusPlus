@@ -60,6 +60,8 @@ public:
     virtual FRHIInitializationResult Initialize(const FNativeWindowHandle& NativeWindowHandle, uint32 InitialWindowWidth, uint32 InitialWindowHeight, bool bRequestVSync) = 0;
     virtual void Destroy() = 0;
     
+    virtual void WaitIdle() = 0;
+    
     virtual void OnWindowResized(uint32 NewWidth, uint32 NewHeight) = 0;
 protected:
     IRHIContext() = default;
