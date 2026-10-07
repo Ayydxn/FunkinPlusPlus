@@ -24,10 +24,11 @@ public:
     void BindIndexBuffer(const IIndexBuffer& IndexBuffer) const;
     void BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuffer& UniformBuffer) const;
     
-    void Draw(uint32 VertexCount, uint32 InstanceCount) const;
+    void Draw(uint32 VertexCount, uint32 InstanceCount, uint32 FirstInstance) const;
     void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) const;
     
     ICommandBuffer* GetCurrentCommandBuffer() const { return m_DynamicRHI.GetCurrentCommandBuffer(); }
+    uint32 GetCurrentFrameIndex() const { return m_DynamicRHI.GetCurrentFrameIndex(); }
     
     void AddShader(const std::shared_ptr<IShader>& Shader);
 

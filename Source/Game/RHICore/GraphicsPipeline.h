@@ -77,7 +77,8 @@ struct FGraphicsPipelineDescription
 private:
     bool AreVertexBufferLayoutsEqual(const FVertexBufferLayout& Other) const
     {
-        if (VertexBufferLayout.GetStride() != Other.GetStride() || VertexBufferLayout.GetElementCount() != Other.GetElementCount())
+        if (VertexBufferLayout.GetStride() != Other.GetStride() || VertexBufferLayout.GetElementCount() != Other.GetElementCount() ||
+            VertexBufferLayout.GetInputRate() != Other.GetInputRate())
             return false;
         
         for (size_t Index = 0; Index < VertexBufferLayout.GetElementCount(); ++Index)
@@ -104,6 +105,7 @@ struct std::hash<FGraphicsPipelineDescription>
         // AreVertexBufferLayoutsEqual() above still does the real, exact comparison on collision, same "hash for lookup, equality for truth" split the manager already relies on.
         HashCombine(Hash, GraphicsPipelineDescription.VertexBufferLayout.GetStride());
         HashCombine(Hash, GraphicsPipelineDescription.VertexBufferLayout.GetElementCount());
+        HashCombine(Hash, GraphicsPipelineDescription.VertexBufferLayout.GetInputRate());
         
         // Primitive Topology
         HashCombine(Hash, static_cast<uint32>(GraphicsPipelineDescription.PrimitiveTopology));

@@ -22,10 +22,11 @@ public:
     virtual void BindIndexBuffer(const IIndexBuffer& IndexBuffer) = 0;
     virtual void BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuffer& UniformBuffer) = 0;
     
-    virtual void Draw(uint32 VertexCount, uint32 InstanceCount) = 0;
+    virtual void Draw(uint32 VertexCount, uint32 InstanceCount, uint32 FirstInstance) = 0;
     virtual void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) = 0;
     
     virtual ICommandBuffer* GetCurrentCommandBuffer() const = 0;
+    virtual uint32 GetCurrentFrameIndex() const = 0;
 protected:
     IDynamicRHI() = default;
 };

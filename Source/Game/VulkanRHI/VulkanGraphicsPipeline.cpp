@@ -54,6 +54,9 @@ namespace
             case EShaderDataType::Int2:      return vk::Format::eR32G32Sint;
             case EShaderDataType::Int3:      return vk::Format::eR32G32B32Sint;
             case EShaderDataType::Int4:      return vk::Format::eR32G32B32A32Sint;
+                
+            case EShaderDataType::UInt:      return vk::Format::eR32Uint;
+            case EShaderDataType::UNorm8x4:  return vk::Format::eR8G8B8A8Unorm;
             
             case EShaderDataType::Boolean:   return vk::Format::eUndefined;
         }
@@ -62,6 +65,18 @@ namespace
         return vk::Format::eUndefined;
     }
     
+    vk::VertexInputRate GetVulkanVertexInputRate(EVertexInputRate InputRate)
+    {
+        switch (InputRate)
+        {
+            case EVertexInputRate::PerVertex:   return vk::VertexInputRate::eVertex;
+            case EVertexInputRate::PerInstance: return vk::VertexInputRate::eInstance;
+        }
+        
+        verifyFunkinf(false, "Failed to get Vulkan vertex input rate for unknown vertex input rate!")
+        return vk::VertexInputRate::eVertex;
+    }
+        
     vk::PrimitiveTopology GetVulkanPrimitiveTopology(EPrimitiveTopology PrimitiveTopology)
     {
         switch (PrimitiveTopology)
@@ -221,7 +236,7 @@ void CVulkanGraphicsPipeline::Invalidate()
     vk::VertexInputBindingDescription VertexInputBindingDescription = {};
     VertexInputBindingDescription.binding = 0;
     VertexInputBindingDescription.stride = VertexBufferLayout.GetStride();
-    VertexInputBindingDescription.inputRate = vk::VertexInputRate::eVertex;
+    VertexInputBindingDescription.inputRate = GetVulkanVertexInputRate(VertexBufferLayout.GetInputRate());
     
     std::vector<vk::VertexInputAttributeDescription> VertexInputAttributeDescriptions(VertexBufferLayout.GetElementCount());
     int32 Location = 0;

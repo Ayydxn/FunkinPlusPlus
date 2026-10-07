@@ -19,10 +19,11 @@ public:
     void BindIndexBuffer(const IIndexBuffer& IndexBuffer) override;
     void BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuffer& UniformBuffer) override;
     
-    void Draw(uint32 VertexCount, uint32 InstanceCount) override;
+    void Draw(uint32 VertexCount, uint32 InstanceCount, uint32 FirstInstance) override;
     void DrawIndexed(uint32 IndexCount, uint32 InstanceCount) override;
     
     ICommandBuffer* GetCurrentCommandBuffer() const override;
+    uint32 GetCurrentFrameIndex() const override;
 private:
     CVulkanCommandBuffer* GetCurrentVulkanCommandBuffer() const;
 private:

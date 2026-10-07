@@ -46,9 +46,9 @@ void CRenderer::BindUniformBuffer(uint32 Set, uint32 Binding, const IUniformBuff
     m_DynamicRHI.BindUniformBuffer(Set, Binding, UniformBuffer);
 }
 
-void CRenderer::Draw(uint32 VertexCount, uint32 InstanceCount) const
+void CRenderer::Draw(uint32 VertexCount, uint32 InstanceCount, uint32 FirstInstance) const
 {
-    m_DynamicRHI.Draw(VertexCount, InstanceCount);
+    m_DynamicRHI.Draw(VertexCount, InstanceCount, FirstInstance);
 }
 
 void CRenderer::DrawIndexed(uint32 IndexCount, uint32 InstanceCount) const

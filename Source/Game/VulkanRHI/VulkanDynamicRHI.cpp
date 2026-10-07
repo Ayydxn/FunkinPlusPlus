@@ -254,7 +254,7 @@ void CVulkanDynamicRHI::BindUniformBuffer(uint32 Set, uint32 Binding, const IUni
     CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_CurrentlyBoundPipeline->GetLayout(), Set, DescriptorSet, {});
 }
 
-void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)
+void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount, uint32 FirstInstance)
 {
     const CVulkanCommandBuffer* VulkanCommandBuffer = GetCurrentVulkanCommandBuffer();
     if (!VulkanCommandBuffer)
@@ -264,7 +264,7 @@ void CVulkanDynamicRHI::Draw(uint32 VertexCount, uint32 InstanceCount)
     
     FUNKIN_PROFILE_VULKAN_ZONE(m_VulkanContext.GetDevice().GetTracyContext(), CommandBuffer, __FUNCTION__)
     
-    CommandBuffer.draw(VertexCount, InstanceCount, 0, 0);
+    CommandBuffer.draw(VertexCount, InstanceCount, 0, FirstInstance);
 }
 
 void CVulkanDynamicRHI::DrawIndexed(uint32 IndexCount, uint32 InstanceCount)
@@ -296,4 +296,11 @@ CVulkanCommandBuffer* CVulkanDynamicRHI::GetCurrentVulkanCommandBuffer() const
     m_CurrentCommandBuffer.emplace(SwapChain->GetCommandBuffer(AcquiredFrame.FrameIndex));
     
     return &m_CurrentCommandBuffer.value();
+}
+
+uint32 CVulkanDynamicRHI::GetCurrentFrameIndex() const
+{
+    verifyFunkinf(m_CurrentlyAcquiredFrame.has_value(), "Attempted to get the current frame index outside of the scope of BeginFrame() and EndFrame()!")
+    
+    return m_CurrentlyAcquiredFrame->FrameIndex;
 }

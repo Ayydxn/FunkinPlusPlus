@@ -22,8 +22,17 @@ enum class EShaderDataType
     Int2,
     Int3,
     Int4,
+    
+    UInt,
+    UNorm8x4,
 
     Boolean
+};
+
+enum class EVertexInputRate
+{
+    PerVertex,
+    PerInstance
 };
 
 // (Ayydxn) Ported over from Moonlight largely as-is - this is pure vertex-layout description with no
@@ -95,6 +104,7 @@ public:
 
     const std::vector<FVertexBufferElement>& GetElements() const { return m_VertexBufferElements; }
     uint32 GetElementCount() const { return static_cast<uint32>(m_VertexBufferElements.size()); }
+    EVertexInputRate GetInputRate() const { return m_InputRate; }
     uint32 GetStride() const { return m_Stride; }
     
     [[nodiscard]] std::vector<FVertexBufferElement>::iterator begin() { return m_VertexBufferElements.begin(); }
@@ -117,6 +127,7 @@ private:
 private:
     std::vector<FVertexBufferElement> m_VertexBufferElements;
 
+    EVertexInputRate m_InputRate = EVertexInputRate::PerVertex;
     uint32 m_Stride = 0;
 };
 
