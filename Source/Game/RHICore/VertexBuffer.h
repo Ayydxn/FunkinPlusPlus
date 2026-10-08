@@ -63,6 +63,8 @@ struct FVertexBufferElement
             case EShaderDataType::Int2:      return 2;
             case EShaderDataType::Int3:      return 3;
             case EShaderDataType::Int4:      return 4;
+            case EShaderDataType::UInt:      return 1;
+            case EShaderDataType::UNorm8x4:  return 4;
             case EShaderDataType::Boolean:   return 1;
         }
 
@@ -84,6 +86,8 @@ private:
             case EShaderDataType::Int2:      return 8;
             case EShaderDataType::Int3:      return 12;
             case EShaderDataType::Int4:      return 16;
+            case EShaderDataType::UInt:      return 4;
+            case EShaderDataType::UNorm8x4:  return 4;
             case EShaderDataType::Boolean:   return 1;
         }
 
