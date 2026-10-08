@@ -28,6 +28,14 @@ public:
 public:
     // TODO: (Ayydxn) Once game settings exist, read this from there instead of hardcoding it.
     static constexpr uint32 DefaultFramesInFlight = 3;
+    
+    // The number of sampled image descriptors in the texture table the batch renderer indexes per instance.
+    // The table lives in an update-after-bind set. So, it's the update-after-bind limits (not the regular maxPerStage* ones, which are as low as 200 on some Intel iGPUs) that decide whether it fits.
+    // Physical device selection rejects any GPU whose update-after-bind limits are below this, so the table can always be created at this size.
+    static constexpr uint32 TextureTableCapacity = 1024;
+    
+    // Largest texture dimension we require the GPU to support. The game's character atlases go up to 8192 pixels on a side, while Vulkan only guarantees 4096.
+    static constexpr uint32 RequiredMaxTextureDimension = 8192;
 private:
     void CreateDebugMessenger();
     void PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateInfoEXT& DebugMessengerCreateInfo);

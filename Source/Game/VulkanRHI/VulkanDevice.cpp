@@ -186,7 +186,7 @@ FRHIInitializationResult CVulkanDevice::SelectPhysicalDevice(vk::Instance Vulkan
 	if (!m_PhysicalDevice)
 	{
 		LOG_ERROR_TAG("VulkanRHI", "Failed to select a Vulkan physical device! {} device(s) were enumerated, but none were suitable "
-			"(requires a discrete/integrated GPU supporting Vulkan 1.3 dynamic rendering & synchronization2, presentation, and swapchain support).",
+			"(requires a discrete/integrated GPU supporting Vulkan 1.3 dynamic rendering & synchronization2, descriptor indexing (non-uniform sampled image array indexing), presentation, and swapchain support).",
 			AvailablePhysicalDevices.size());
 
 		for (const auto PhysicalDevice : AvailablePhysicalDevices)
@@ -200,7 +200,7 @@ FRHIInitializationResult CVulkanDevice::SelectPhysicalDevice(vk::Instance Vulkan
 		}
 	    
 	    return FRHIInitializationResult::MakeFailure(ERHIInitializationResultCode::NoSuitableAdapter, "Vulkan Hardware Compatibility Error",
-            "Friday Night Funkin'++ requires a GPU with Vulkan 1.3 support, and no suitable graphics device was found on this system.\n\n"
+            "Friday Night Funkin'++ requires a GPU with Vulkan 1.3 support (including descriptor indexing), and no suitable graphics device was found on this system.\n\n"
             "Please ensure your operating system and GPU drivers are up to date and that your hardware supports Vulkan 1.3.\n\n"
             "Check the logs and the Vulkan hardware database (https://vulkan.gpuinfo.org) for more information about your GPU's Vulkan capabilities.");
 	}
@@ -236,11 +236,27 @@ void CVulkanDevice::CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice)
     PhysicalDeviceVulkan11Features.sType = vk::StructureType::ePhysicalDeviceVulkan11Features;
     PhysicalDeviceVulkan11Features.shaderDrawParameters = vk::True;
     
+    // Descriptor indexing, used by the batch renderer's texture table: each instance carries an index into one array of sampled images, and that index varies per instance
+    // within a single draw (non-uniform). Not every slot of the table is written at any given time, hence partially bound.
+    // The table also lives in an update-after-bind set, since those limits are far higher than the regular per-stage ones on some GPUs.
+    vk::PhysicalDeviceVulkan12Features PhysicalDeviceVulkan12Features = {};
+    PhysicalDeviceVulkan12Features.sType = vk::StructureType::ePhysicalDeviceVulkan12Features;
+    PhysicalDeviceVulkan12Features.shaderSampledImageArrayNonUniformIndexing = vk::True;
+    PhysicalDeviceVulkan12Features.descriptorBindingPartiallyBound = vk::True;
+    PhysicalDeviceVulkan12Features.descriptorBindingSampledImageUpdateAfterBind = vk::True;
+    PhysicalDeviceVulkan12Features.pNext = &PhysicalDeviceVulkan11Features;
+    
     vk::PhysicalDeviceVulkan13Features PhysicalDeviceVulkan13Features = {};
     PhysicalDeviceVulkan13Features.sType = vk::StructureType::ePhysicalDeviceVulkan13Features;
     PhysicalDeviceVulkan13Features.dynamicRendering = vk::True;
     PhysicalDeviceVulkan13Features.synchronization2 = vk::True;
-    PhysicalDeviceVulkan13Features.pNext = &PhysicalDeviceVulkan11Features;
+    PhysicalDeviceVulkan13Features.pNext = &PhysicalDeviceVulkan12Features;
+    
+    // The core (Vulkan 1.0) features have to be requested through VkPhysicalDeviceFeatures2 once the version-specific structs are in the chain.
+    vk::PhysicalDeviceFeatures2 PhysicalDeviceFeatures2 = {};
+    PhysicalDeviceFeatures2.sType = vk::StructureType::ePhysicalDeviceFeatures2;
+    PhysicalDeviceFeatures2.features.shaderSampledImageArrayDynamicIndexing = vk::True;
+    PhysicalDeviceFeatures2.pNext = &PhysicalDeviceVulkan13Features;
     
     vk::DeviceCreateInfo DeviceCreateInfo = {};
     DeviceCreateInfo.sType = vk::StructureType::eDeviceCreateInfo;
@@ -248,7 +264,7 @@ void CVulkanDevice::CreateLogicalDevice(vk::PhysicalDevice PhysicalDevice)
     DeviceCreateInfo.pQueueCreateInfos = DeviceQueueCreateInfos.data();
     DeviceCreateInfo.enabledExtensionCount = static_cast<uint32>(GRequiredPhysicalDeviceExtensions.size());
     DeviceCreateInfo.ppEnabledExtensionNames = GRequiredPhysicalDeviceExtensions.data();
-    DeviceCreateInfo.pNext = &PhysicalDeviceVulkan13Features;
+    DeviceCreateInfo.pNext = &PhysicalDeviceFeatures2;
     DeviceCreateInfo.flags = vk::DeviceCreateFlags();
     
     VK_CHECK_RESULT(PhysicalDevice.createDevice(DeviceCreateInfo), m_LogicalDevice, "Failed to create Vulkan logical device!")
@@ -450,16 +466,56 @@ bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredExtensions(vk::PhysicalDevi
 
 bool CVulkanDevice::DoesPhysicalDeviceSupportRequiredFeatures(vk::PhysicalDevice PhysicalDevice)
 {
+    vk::PhysicalDeviceVulkan13Features PhysicalDeviceVulkan13Features = {};
+    PhysicalDeviceVulkan13Features.sType = vk::StructureType::ePhysicalDeviceVulkan13Features;
+
+    vk::PhysicalDeviceVulkan12Features PhysicalDeviceVulkan12Features = {};
+    PhysicalDeviceVulkan12Features.sType = vk::StructureType::ePhysicalDeviceVulkan12Features;
+    PhysicalDeviceVulkan12Features.pNext = &PhysicalDeviceVulkan13Features;
+
     vk::PhysicalDeviceVulkan11Features PhysicalDeviceVulkan11Features = {};
     PhysicalDeviceVulkan11Features.sType = vk::StructureType::ePhysicalDeviceVulkan11Features;
+    PhysicalDeviceVulkan11Features.pNext = &PhysicalDeviceVulkan12Features;
 
     vk::PhysicalDeviceFeatures2 PhysicalDeviceFeatures2 = {};
     PhysicalDeviceFeatures2.sType = vk::StructureType::ePhysicalDeviceFeatures2;
     PhysicalDeviceFeatures2.pNext = &PhysicalDeviceVulkan11Features;
 
     PhysicalDevice.getFeatures2(&PhysicalDeviceFeatures2);
+    
+    vk::PhysicalDeviceVulkan12Properties PhysicalDeviceVulkan12Properties = {};
+    PhysicalDeviceVulkan12Properties.sType = vk::StructureType::ePhysicalDeviceVulkan12Properties;
 
-    return PhysicalDeviceVulkan11Features.shaderDrawParameters == vk::True;
+    vk::PhysicalDeviceProperties2 PhysicalDeviceProperties2 = {};
+    PhysicalDeviceProperties2.sType = vk::StructureType::ePhysicalDeviceProperties2;
+    PhysicalDeviceProperties2.pNext = &PhysicalDeviceVulkan12Properties;
+
+    PhysicalDevice.getProperties2(&PhysicalDeviceProperties2);
+    
+    const bool bSupportsShaderDrawParameters = PhysicalDeviceVulkan11Features.shaderDrawParameters == vk::True;
+    const bool bSupportsDynamicRendering = PhysicalDeviceVulkan13Features.dynamicRendering == vk::True;
+    const bool bSupportsSynchronization2 = PhysicalDeviceVulkan13Features.synchronization2 == vk::True;
+    
+    const bool bSupportsSampledImageArrayDynamicIndexing = PhysicalDeviceFeatures2.features.shaderSampledImageArrayDynamicIndexing == vk::True;
+    const bool bSupportsSampledImageArrayNonUniformIndexing = PhysicalDeviceVulkan12Features.shaderSampledImageArrayNonUniformIndexing == vk::True;
+    const bool bSupportsPartiallyBoundDescriptors = PhysicalDeviceVulkan12Features.descriptorBindingPartiallyBound == vk::True;
+    const bool bSupportsSampledImageUpdateAfterBind = PhysicalDeviceVulkan12Features.descriptorBindingSampledImageUpdateAfterBind == vk::True;
+    
+    // The next two are limits, not features, but they decide whether the texture table can exist at all. The guaranteed minimums are small, even on GPUs that support
+    // everything above, so they have to be checked against the table size explicitly. Since the table is update-after-bind, it's the update-after-bind variants that apply,
+    // not the regular maxPerStageDescriptorSampledImages / maxPerStageResources (which only count descriptors in layouts created without update-after-bind).
+    // The headroom covers the other bindings the same shader stage uses (camera uniforms, samplers, etc.).
+    constexpr uint32 OtherPerStageResourceHeadroom = 32;
+    
+    const bool bSupportsTextureTableCapacity = PhysicalDeviceVulkan12Properties.maxPerStageDescriptorUpdateAfterBindSampledImages >= CVulkanContext::TextureTableCapacity &&
+        PhysicalDeviceVulkan12Properties.maxDescriptorSetUpdateAfterBindSampledImages >= CVulkanContext::TextureTableCapacity &&
+        PhysicalDeviceVulkan12Properties.maxPerStageUpdateAfterBindResources >= CVulkanContext::TextureTableCapacity + OtherPerStageResourceHeadroom;
+    
+    const bool bSupportsRequiredTextureDimension = PhysicalDeviceProperties2.properties.limits.maxImageDimension2D >= CVulkanContext::RequiredMaxTextureDimension;
+
+    return bSupportsShaderDrawParameters && bSupportsDynamicRendering && bSupportsSynchronization2 && bSupportsSampledImageArrayDynamicIndexing
+        && bSupportsSampledImageArrayNonUniformIndexing && bSupportsPartiallyBoundDescriptors && bSupportsSampledImageUpdateAfterBind && bSupportsTextureTableCapacity
+        && bSupportsRequiredTextureDimension;
 }
 
 uint32 CVulkanDevice::RatePhysicalDevice(vk::PhysicalDevice PhysicalDevice)
