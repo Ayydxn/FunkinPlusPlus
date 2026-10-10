@@ -5,7 +5,7 @@ project "Game"
     pchsource "%{SourceDir}/Game/FunkinPCH.cpp"
     pchheader "FunkinPCH.h"
     
-    IncludeDependencies({ "spdlog", "SDL3", "tracy", "Vulkan", "Slang", "stb", "ImGui" })
+    IncludeDependencies({ "spdlog", "SDL3", "tracy", "Vulkan", "Slang", "glm", "stb", "ImGui" })
 
     files
     {
