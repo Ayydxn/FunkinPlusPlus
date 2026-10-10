@@ -23,5 +23,4 @@ std::shared_ptr<IGraphicsPipeline> CreateGraphicsPipeline(ERHIBackend RHIBackend
     
     verifyFunkinf(false, "Failed to create graphics pipeline! An unknown/unsupported RHI backend was requested!")
     return nullptr;
-
 }

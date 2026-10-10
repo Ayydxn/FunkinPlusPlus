@@ -16,6 +16,9 @@ class IIndexBuffer
 public:
     virtual ~IIndexBuffer() = default;
     
+    IIndexBuffer(const IIndexBuffer&) = delete;
+    IIndexBuffer& operator=(const IIndexBuffer&) = delete;
+    
     // Data must fit within the buffer's existing size (SizeInBytes at creation) - this writes into the existing allocation, it doesn't resize.
     // If you wanna grow it, create a new buffer instead.
     virtual void SetData(const void* Data, uint64 SizeInBytes) = 0;

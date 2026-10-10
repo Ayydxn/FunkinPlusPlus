@@ -259,6 +259,10 @@ Register("Slang", {
     }
 })
 
+Register("stb", {
+    IncludePaths = { ThirdPartyFolder .. "stb_image" }
+})
+
 Register("ImGui", {
     IncludePaths = { ThirdPartyFolder .. "ImGui" },
     

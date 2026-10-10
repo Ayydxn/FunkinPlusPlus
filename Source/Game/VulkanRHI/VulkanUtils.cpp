@@ -39,6 +39,24 @@ void CVulkanUtils::TransitionImageLayout(vk::CommandBuffer CommandBuffer, vk::Im
     CommandBuffer.pipelineBarrier2(DependencyInfo);
 }
 
+void CVulkanUtils::CopyBufferToImage(vk::CommandBuffer CommandBuffer, vk::Buffer Buffer, vk::Image Image, uint32 ImageWidth, uint32 ImageHeight,
+    vk::ImageLayout ImageLayout)
+{
+    vk::BufferImageCopy BufferImageCopy;
+    BufferImageCopy.bufferOffset = 0;
+    BufferImageCopy.bufferRowLength = 0;
+    BufferImageCopy.bufferImageHeight = 0;
+    BufferImageCopy.imageOffset = vk::Offset3D(0, 0, 0);
+    BufferImageCopy.imageExtent = vk::Extent3D(ImageWidth, ImageHeight, 1);
+    
+    BufferImageCopy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    BufferImageCopy.imageSubresource.mipLevel = 0;
+    BufferImageCopy.imageSubresource.baseArrayLayer = 0;
+    BufferImageCopy.imageSubresource.layerCount = 1;
+    
+    CommandBuffer.copyBufferToImage(Buffer, Image, ImageLayout, BufferImageCopy);
+}
+
 bool CVulkanUtils::DoesFormatHaveStencilComponent(vk::Format Format)
 {
     constexpr std::array<vk::Format, 2> StencilFormats
