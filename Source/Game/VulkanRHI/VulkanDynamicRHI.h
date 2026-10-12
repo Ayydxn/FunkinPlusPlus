@@ -24,6 +24,7 @@ public:
     
     ICommandBuffer* GetCurrentCommandBuffer() const override;
     uint32 GetCurrentFrameIndex() const override;
+    uint32 GetFramesInFlight() const override;
 private:
     CVulkanCommandBuffer* GetCurrentVulkanCommandBuffer() const;
 private:

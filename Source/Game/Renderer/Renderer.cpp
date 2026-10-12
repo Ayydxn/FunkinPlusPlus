@@ -1,18 +1,28 @@
 ﻿#include "FunkinPCH.h"
 #include "Renderer.h"
+#include "Renderer2DTypes.h"
 #include "Misc/Paths.h"
 
 void CRenderer::Initialize()
 {
     m_ShaderCompiler.Initialize(m_RHIBackend);
     
-    LoadShader(CPaths::GetShadersDirectory() / "TriangleTest");
+    LoadShader(CPaths::GetShadersDirectory() / "Renderer2DQuad");
     
-    m_GraphicsPipelineManager.GetOrCreate("TriangleTest", {
-        .Shader = GetShader("TriangleTest"),
-        .VertexBufferLayout =  {
-            { "Positions", EShaderDataType::Float3 }
-        }
+    m_GraphicsPipelineManager.GetOrCreate("Renderer2DQuad", {
+        .Shader = GetShader("Renderer2DQuad"),
+        .VertexBufferLayout = GetQuadVertexBufferLayout(),
+        .RasterizerState ={
+            .CullMode = ECullMode::None
+        },
+        .DepthStencilState = {
+            .bEnableDepthTesting = false,
+            .bEnableDepthWriting = false
+        },
+        .BlendState = {
+            .bEnableBlending = true
+        },
+        .DebugName = "Renderer2D - Quads"
     });
 }
 

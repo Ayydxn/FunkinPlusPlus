@@ -29,6 +29,7 @@ public:
     
     ICommandBuffer* GetCurrentCommandBuffer() const { return m_DynamicRHI.GetCurrentCommandBuffer(); }
     uint32 GetCurrentFrameIndex() const { return m_DynamicRHI.GetCurrentFrameIndex(); }
+    uint32 GetFramesInFlight() const { return m_DynamicRHI.GetFramesInFlight(); }
     
     void AddShader(const std::shared_ptr<IShader>& Shader);
 

@@ -33,6 +33,8 @@ bool CFunkinLoop::Initialize()
     if (!m_EngineContext.Initialize(m_SelectedRHIBackend, m_Application.GetWindow().GetNativeHandle(), MainWindowWidth, MainWindowHeight, bWasVSyncRequested))
         return false;
     
+    m_SceneRenderer = std::make_unique<CSceneRenderer>(m_EngineContext.GetRenderer());
+    
     m_ListenerHandle = m_EngineContext.GetEventBroadcaster().AddListener([this](IEvent& Event) { OnEvent(Event); }, 0);
     
     m_FramePacer.Initialize(1.0 / TickRate, ResolveDefaultRenderIntervalSeconds());
@@ -71,6 +73,8 @@ void CFunkinLoop::Tick()
             
             if (!bIsWindowMinimized && m_EngineContext.GetRenderer().BeginFrame())
             {
+                m_SceneRenderer->Render();
+                
                 /* -- Render ImGui -- */
                 
                 m_EngineContext.GetImGuiRenderer().BeginFrame();
@@ -99,6 +103,8 @@ void CFunkinLoop::Shutdown()
     // Although a device wait idle is done within the call stack of CEngineContext::Shutdown(), we do it here as well to ensure that any resources destroyed in response to
     // anything before it are not still in use by the GPU.
     m_EngineContext.GetRHIContext().WaitIdle();
+    
+    m_SceneRenderer.reset();
     
     FEngineDelegates::ShutdownDelegate.Broadcast();
     

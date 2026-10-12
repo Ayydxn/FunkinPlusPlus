@@ -27,7 +27,8 @@ public:
     
     virtual ICommandBuffer* GetCurrentCommandBuffer() const = 0;
     virtual uint32 GetCurrentFrameIndex() const = 0;
-protected:
+    virtual uint32 GetFramesInFlight() const = 0;
+ protected:
     IDynamicRHI() = default;
 };
 

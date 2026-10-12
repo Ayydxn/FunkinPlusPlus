@@ -304,3 +304,8 @@ uint32 CVulkanDynamicRHI::GetCurrentFrameIndex() const
     
     return m_CurrentlyAcquiredFrame->FrameIndex;
 }
+
+uint32 CVulkanDynamicRHI::GetFramesInFlight() const
+{
+    return CVulkanContext::DefaultFramesInFlight;
+}

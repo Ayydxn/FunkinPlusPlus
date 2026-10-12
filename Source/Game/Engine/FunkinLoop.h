@@ -4,6 +4,7 @@
 #include "FramePacer.h"
 #include "Application/Application.h"
 #include "Events/Event.h"
+#include "Renderer/SceneRenderer.h"
 
 class CFunkinLoop
 {
@@ -22,6 +23,8 @@ private:
     double ResolveDefaultRenderIntervalSeconds() const;
     ERHIBackend ResolveRHIBackend() const;
 private:
+    std::unique_ptr<CSceneRenderer> m_SceneRenderer;
+    
     CEngineContext m_EngineContext;
     CApplication m_Application;
     CFramePacer m_FramePacer;
